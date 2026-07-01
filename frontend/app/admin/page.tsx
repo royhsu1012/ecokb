@@ -50,7 +50,7 @@ export default function AdminPage() {
     setUploading(true);
     for (const file of Array.from(files)) {
       try {
-        await api.documents.upload(kbId, session.userId, file);
+        await api.documents.upload(kbId, file);
       } catch (e: any) {
         alert(`上傳失敗：${file.name} — ${e.message}`);
       }
@@ -71,7 +71,7 @@ export default function AdminPage() {
     const file = new File([blob], `${manualTitle || "手動輸入"}.txt`, { type: "text/plain" });
     setUploading(true);
     try {
-      await api.documents.upload(kbId, session.userId, file);
+      await api.documents.upload(kbId, file);
       setManualText(""); setManualTitle("");
       await loadDocs(kbId);
     } catch (e: any) { alert(e.message); }

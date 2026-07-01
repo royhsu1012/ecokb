@@ -46,11 +46,10 @@ export const api = {
     list: (kb_id: string) => request<any[]>(`/documents/kb/${kb_id}`),
     delete: (doc_id: string) => request(`/documents/${doc_id}`, { method: "DELETE" }),
     status: (doc_id: string) => request<{ status: string; chunk_count: number }>(`/documents/${doc_id}/status`),
-    upload: async (kb_id: string, user_id: string, file: File) => {
+    upload: async (kb_id: string, file: File) => {
       const token = localStorage.getItem("access_token");
       const form = new FormData();
       form.append("kb_id", kb_id);
-      form.append("user_id", user_id);
       form.append("file", file);
       const res = await fetch(`${BASE}/documents/upload`, {
         method: "POST",

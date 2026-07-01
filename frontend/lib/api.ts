@@ -1,4 +1,8 @@
+import type { Document } from "./types";
+
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+interface KnowledgeBase { id: string; name: string; user_id: string; created_at: string; }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
@@ -38,12 +42,12 @@ export const api = {
       }),
   },
   kb: {
-    list: (user_id: string) => request<any[]>(`/chat/kb/${user_id}`),
+    list: (user_id: string) => request<KnowledgeBase[]>(`/chat/kb/${user_id}`),
     create: (name: string) =>
       request("/chat/kb", { method: "POST", body: JSON.stringify({ name }) }),
   },
   documents: {
-    list: (kb_id: string) => request<any[]>(`/documents/kb/${kb_id}`),
+    list: (kb_id: string) => request<Document[]>(`/documents/kb/${kb_id}`),
     delete: (doc_id: string) => request(`/documents/${doc_id}`, { method: "DELETE" }),
     status: (doc_id: string) => request<{ status: string; chunk_count: number }>(`/documents/${doc_id}/status`),
     upload: async (kb_id: string, file: File) => {

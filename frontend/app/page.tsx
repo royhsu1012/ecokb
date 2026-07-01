@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
+import { Logo } from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,8 +53,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#7c3aed,#2d7dd2)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 800, fontSize: 16, boxShadow: "0 4px 14px rgba(124,58,237,0.4)" }}>E</div>
-            <span style={{ fontSize: 26, fontWeight: 800, color: "#e2e8f0", letterSpacing: "-0.5px" }}>EconKB</span>
+            <Logo size={36} fontSize={26} />
           </div>
           <p style={{ color: "#64748b", fontSize: 13 }}>經濟學知識庫 · RAG 問答平台</p>
         </div>
@@ -67,26 +67,20 @@ export default function LoginPage() {
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>電子郵件</label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #1e3a5f", background: "#0d1117", color: "#e2e8f0", outline: "none", fontSize: 14, transition: "border-color 0.2s" }}
-                onFocus={e => e.target.style.borderColor = "#7c3aed"}
-                onBlur={e => e.target.style.borderColor = "#1e3a5f"}
+                className="auth-input"
                 placeholder="you@example.com" />
             </div>
             <div>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>密碼</label>
               <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #1e3a5f", background: "#0d1117", color: "#e2e8f0", outline: "none", fontSize: 14 }}
-                onFocus={e => e.target.style.borderColor = "#7c3aed"}
-                onBlur={e => e.target.style.borderColor = "#1e3a5f"}
+                className="auth-input"
                 placeholder="••••••••" />
             </div>
             {isRegister && (
               <div>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>管理員金鑰 <span style={{ fontWeight: 400, textTransform: "none" }}>(選填)</span></label>
                 <input type="password" value={adminKey} onChange={e => setAdminKey(e.target.value)}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid #1e3a5f", background: "#0d1117", color: "#e2e8f0", outline: "none", fontSize: 14 }}
-                  onFocus={e => e.target.style.borderColor = "#7c3aed"}
-                  onBlur={e => e.target.style.borderColor = "#1e3a5f"}
+                  className="auth-input"
                   placeholder="管理員專用金鑰" />
               </div>
             )}

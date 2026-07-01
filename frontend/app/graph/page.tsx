@@ -70,8 +70,8 @@ export default function GraphPage() {
         .data(filteredLinks).join("line")
         .attr("stroke", "#1e3a5f").attr("stroke-width", 1.5);
 
-      const node = g.append("g").selectAll("g")
-        .data(filtered).join("g")
+      const node = (g.append("g").selectAll("g")
+        .data(filtered).join("g") as d3.Selection<SVGGElement, any, SVGGElement, unknown>)
         .style("cursor", "pointer")
         .on("click", (_e, d) => setSelected(d as GraphNode))
         .call(d3.drag<SVGGElement, any>()

@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
-  basePath: '/ecokb',
+  basePath: process.env.NODE_ENV === 'production' ? '/ecokb' : '',
+  trailingSlash: true,
   images: { unoptimized: true },
 };
 

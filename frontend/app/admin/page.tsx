@@ -9,12 +9,24 @@ const STATUS_COLORS: Record<string, string> = {
   embedding: "#06b6d4", ready: "#10b981", error: "#ef4444",
 };
 const STATUS_LABELS: Record<string, string> = {
-  pending: "等待中", parsing: "解析中", ocr: "OCR", embedding: "向量化", ready: "完成", error: "錯誤",
+  pending: "等待", parsing: "解析中", ocr: "OCR", embedding: "向量化", ready: "完成", error: "錯誤",
 };
 const TYPE_COLORS: Record<string, string> = {
   pdf: "#7c3aed", docx: "#2d7dd2", txt: "#10b981",
   csv: "#f59e0b", xlsx: "#f97316", jpg: "#ec4899", png: "#ec4899",
 };
+const TYPE_ICONS: Record<string, string> = {
+  pdf: "📄", docx: "📝", txt: "📃", csv: "📊", xlsx: "📊", jpg: "🖼️", png: "🖼️",
+};
+
+const DEMO = typeof window !== "undefined" && localStorage.getItem("access_token") === "demo-token";
+
+const DEMO_DOCS = [
+  { id: "1", filename: "Macroeconomics_Ch5.pdf", file_type: "pdf", status: "ready", chunk_count: 42, created_at: new Date().toISOString() },
+  { id: "2", filename: "Phillips_Curve_Notes.docx", file_type: "docx", status: "ready", chunk_count: 18, created_at: new Date().toISOString() },
+  { id: "3", filename: "GDP_Data_2024.csv", file_type: "csv", status: "embedding", chunk_count: 0, created_at: new Date().toISOString() },
+  { id: "4", filename: "Central_Bank_Report.pdf", file_type: "pdf", status: "parsing", chunk_count: 0, created_at: new Date().toISOString() },
+];
 
 export default function AdminPage() {
   const router = useRouter();
@@ -23,43 +35,51 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"upload" | "manual">("upload");
   const [docs, setDocs] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string[]>([]);
   const [manualText, setManualText] = useState("");
   const [manualTitle, setManualTitle] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [model, setModel] = useState("claude-sonnet-4-6");
+  const isDemo = useRef(false);
 
   useEffect(() => {
     const s = getSession();
     if (!s) { router.push("/"); return; }
+    isDemo.current = s.token === "demo-token";
     setSession({ userId: s.userId, email: s.email });
     const kb = localStorage.getItem("kb_id") || "";
     setKbId(kb);
-    if (kb) loadDocs(kb);
+    if (kb && !isDemo.current) loadDocs(kb);
+    else if (isDemo.current) setDocs(DEMO_DOCS);
   }, []);
 
   async function loadDocs(kb: string) {
-    try {
-      const data = await api.documents.list(kb);
-      setDocs(data);
-    } catch {}
+    try { setDocs(await api.documents.list(kb)); } catch {}
   }
 
   async function uploadFiles(files: FileList | File[]) {
-    if (!kbId || !session) return;
+    if (!kbId || !session || isDemo.current) {
+      if (isDemo.current) { alert("Demo 模式下無法真實上傳，後端連接後即可使用。"); return; }
+      return;
+    }
     setUploading(true);
+    setUploadProgress([]);
     for (const file of Array.from(files)) {
+      setUploadProgress(prev => [...prev, `上傳中：${file.name}`]);
       try {
         await api.documents.upload(kbId, file);
+        setUploadProgress(prev => prev.map(p => p === `上傳中：${file.name}` ? `完成：${file.name}` : p));
       } catch (e: any) {
-        alert(`上傳失敗：${file.name} — ${e.message}`);
+        setUploadProgress(prev => prev.map(p => p === `上傳中：${file.name}` ? `失敗：${file.name} — ${e.message}` : p));
       }
     }
     await loadDocs(kbId);
     setUploading(false);
+    setTimeout(() => setUploadProgress([]), 3000);
   }
 
   async function deleteDoc(id: string) {
+    if (isDemo.current) { setDocs(prev => prev.filter(d => d.id !== id)); return; }
     if (!confirm("確定刪除？")) return;
     await api.documents.delete(id);
     setDocs(prev => prev.filter(d => d.id !== id));
@@ -67,6 +87,7 @@ export default function AdminPage() {
 
   async function submitManual() {
     if (!manualText.trim() || !kbId || !session) return;
+    if (isDemo.current) { alert("Demo 模式下無法真實上傳。"); return; }
     const blob = new Blob([manualText], { type: "text/plain" });
     const file = new File([blob], `${manualTitle || "手動輸入"}.txt`, { type: "text/plain" });
     setUploading(true);
@@ -78,49 +99,42 @@ export default function AdminPage() {
     setUploading(false);
   }
 
-  const S = {
-    page: { minHeight: "100vh", background: "#0d1117", color: "#e2e8f0" },
-    topbar: { padding: "14px 24px", borderBottom: "1px solid #1e3a5f", display: "flex", alignItems: "center", gap: 16, background: "#0d1f3c" },
-    content: { maxWidth: 900, margin: "0 auto", padding: "32px 24px" },
-    card: { background: "#111827", border: "1px solid #1e3a5f", borderRadius: 12, padding: 24, marginBottom: 24 },
-    tab: (active: boolean) => ({
-      padding: "8px 20px", borderRadius: 8, cursor: "pointer", fontSize: 14, border: "none",
-      background: active ? "#7c3aed" : "transparent",
-      color: active ? "white" : "#94a3b8",
-    }),
-    input: { padding: "10px 14px", borderRadius: 8, border: "1px solid #1e3a5f", background: "#0d1117", color: "#e2e8f0", width: "100%", outline: "none", fontSize: 14 },
-  };
+  const readyDocs = docs.filter(d => d.status === "ready");
+  const processingDocs = docs.filter(d => !["ready", "error"].includes(d.status));
+  const errorDocs = docs.filter(d => d.status === "error");
 
   return (
-    <div style={S.page}>
+    <div style={{ minHeight: "100vh", background: "#0d1117", color: "#e2e8f0" }}>
       {/* Topbar */}
-      <div style={S.topbar}>
-        <button onClick={() => router.push("/chat")} style={{ color: "#94a3b8", background: "none", border: "none", cursor: "pointer", fontSize: 20 }}>←</button>
-        <div style={{ width: 28, height: 28, borderRadius: 6, background: "linear-gradient(135deg,#7c3aed,#2d7dd2)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 700, fontSize: 12 }}>E</div>
-        <span style={{ fontWeight: 700 }}>EconKB 管理後台</span>
+      <div style={{ padding: "12px 24px", borderBottom: "1px solid #1a2f50", display: "flex", alignItems: "center", gap: 12, background: "#0a1628", position: "sticky", top: 0, zIndex: 10 }}>
+        <button onClick={() => router.push("/chat")}
+          style={{ color: "#475569", background: "rgba(255,255,255,0.04)", border: "1px solid #1e3a5f", borderRadius: 8, cursor: "pointer", fontSize: 13, padding: "6px 12px" }}>← 返回對話</button>
+        <div style={{ width: 1, height: 20, background: "#1e3a5f" }} />
+        <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#7c3aed,#2d7dd2)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 800, fontSize: 11 }}>E</div>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>管理後台</span>
+        {isDemo.current && <span style={{ fontSize: 11, color: "#0fc6c2", padding: "2px 8px", background: "rgba(15,198,194,0.08)", borderRadius: 6, border: "1px solid rgba(15,198,194,0.2)", fontWeight: 600 }}>DEMO</span>}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 16, fontSize: 12, color: "#475569" }}>
+          <span>{docs.length} 份文件</span>
+          <span style={{ color: "#10b981" }}>{readyDocs.length} 完成</span>
+          {processingDocs.length > 0 && <span style={{ color: "#3b82f6" }}>{processingDocs.length} 處理中</span>}
+          {errorDocs.length > 0 && <span style={{ color: "#ef4444" }}>{errorDocs.length} 錯誤</span>}
+        </div>
       </div>
 
-      <div style={S.content}>
-        {/* Model setting */}
-        <div style={S.card}>
-          <h3 style={{ marginBottom: 16, fontWeight: 600 }}>RAG 模型設定</h3>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <label style={{ color: "#94a3b8", fontSize: 14 }}>問答模型</label>
-            <select value={model} onChange={e => setModel(e.target.value)}
-              style={{ ...S.input, width: "auto", minWidth: 220 }}>
-              <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-              <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (快速)</option>
-              <option value="claude-opus-4-8">claude-opus-4-8 (最強)</option>
-            </select>
-          </div>
-        </div>
+      <div style={{ maxWidth: 920, margin: "0 auto", padding: "32px 24px" }}>
 
-        {/* Upload */}
-        <div style={S.card}>
-          <h3 style={{ marginBottom: 16, fontWeight: 600 }}>新增資料</h3>
-          <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-            <button style={S.tab(tab === "upload")} onClick={() => setTab("upload")}>批量上傳</button>
-            <button style={S.tab(tab === "manual")} onClick={() => setTab("manual")}>手動輸入</button>
+        {/* Upload card */}
+        <div style={{ background: "#0d1f3c", border: "1px solid #1e3a5f", borderRadius: 14, padding: 24, marginBottom: 24 }}>
+          <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 18, color: "#e2e8f0" }}>新增知識來源</h3>
+
+          {/* Tabs */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#0d1117", borderRadius: 10, padding: 4, width: "fit-content" }}>
+            {(["upload", "manual"] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                style={{ padding: "7px 18px", borderRadius: 7, cursor: "pointer", fontSize: 13, fontWeight: 500, border: "none", background: tab === t ? "#1e3a5f" : "transparent", color: tab === t ? "#e2e8f0" : "#475569", transition: "all 0.15s" }}>
+                {t === "upload" ? "檔案上傳" : "手動輸入"}
+              </button>
+            ))}
           </div>
 
           {tab === "upload" ? (
@@ -132,58 +146,98 @@ export default function AdminPage() {
                 onClick={() => fileInputRef.current?.click()}
                 style={{
                   border: `2px dashed ${dragOver ? "#7c3aed" : "#1e3a5f"}`, borderRadius: 12,
-                  padding: "48px 24px", textAlign: "center", cursor: "pointer",
-                  background: dragOver ? "rgba(124,58,237,0.05)" : "transparent", transition: "all 0.2s",
+                  padding: "52px 24px", textAlign: "center", cursor: "pointer",
+                  background: dragOver ? "rgba(124,58,237,0.06)" : "rgba(13,17,23,0.5)", transition: "all 0.2s",
                 }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📁</div>
-                <p style={{ color: "#94a3b8", fontSize: 14 }}>拖曳檔案至此，或點擊選擇</p>
-                <p style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>支援 PDF · DOCX · TXT · CSV · XLSX · JPG · PNG</p>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>📁</div>
+                <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, marginBottom: 4 }}>拖曳檔案至此，或點擊選擇</p>
+                <p style={{ color: "#374151", fontSize: 12 }}>支援 PDF · DOCX · TXT · CSV · XLSX · JPG · PNG（最大 50MB）</p>
               </div>
               <input ref={fileInputRef} type="file" multiple hidden
                 accept=".pdf,.docx,.txt,.csv,.xlsx,.jpg,.jpeg,.png"
                 onChange={e => { if (e.target.files) uploadFiles(e.target.files); }} />
-              {uploading && <p style={{ color: "#0fc6c2", fontSize: 14, marginTop: 12 }}>上傳中…</p>}
+              {uploadProgress.length > 0 && (
+                <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {uploadProgress.map((p, i) => (
+                    <div key={i} style={{ fontSize: 12, color: p.startsWith("失敗") ? "#f87171" : p.startsWith("完成") ? "#34d399" : "#60a5fa", padding: "6px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 6 }}>
+                      {p.startsWith("上傳中") ? "⏳" : p.startsWith("完成") ? "✓" : "✗"} {p}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <input placeholder="標題（選填）" value={manualTitle} onChange={e => setManualTitle(e.target.value)} style={S.input} />
+              <input placeholder="文件標題（選填）" value={manualTitle} onChange={e => setManualTitle(e.target.value)}
+                style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #1e3a5f", background: "#0d1117", color: "#e2e8f0", outline: "none", fontSize: 14 }} />
               <textarea placeholder="貼上或輸入文字內容…" value={manualText} onChange={e => setManualText(e.target.value)} rows={8}
-                style={{ ...S.input, resize: "vertical" }} />
+                style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #1e3a5f", background: "#0d1117", color: "#e2e8f0", outline: "none", fontSize: 14, resize: "vertical", lineHeight: 1.6 }} />
               <button onClick={submitManual} disabled={uploading || !manualText.trim()}
-                style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 8, background: "#7c3aed", color: "white", border: "none", cursor: "pointer", opacity: uploading || !manualText.trim() ? 0.5 : 1 }}>
-                {uploading ? "處理中…" : "新增"}
+                style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 8, background: manualText.trim() ? "linear-gradient(135deg,#7c3aed,#2d7dd2)" : "#1e3a5f", color: manualText.trim() ? "white" : "#374151", border: "none", cursor: manualText.trim() ? "pointer" : "not-allowed", fontWeight: 600, fontSize: 14, transition: "all 0.2s" }}>
+                {uploading ? "處理中…" : "新增到知識庫"}
               </button>
             </div>
           )}
         </div>
 
         {/* Document list */}
-        <div style={S.card}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ fontWeight: 600 }}>已上傳資料（{docs.length}）</h3>
-            <button onClick={() => kbId && loadDocs(kbId)} style={{ color: "#94a3b8", background: "none", border: "none", cursor: "pointer", fontSize: 13 }}>重新整理</button>
+        <div style={{ background: "#0d1f3c", border: "1px solid #1e3a5f", borderRadius: 14, padding: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <h3 style={{ fontWeight: 700, fontSize: 15, color: "#e2e8f0" }}>知識庫文件</h3>
+            <button onClick={() => kbId && !isDemo.current && loadDocs(kbId)}
+              style={{ color: "#475569", background: "rgba(255,255,255,0.04)", border: "1px solid #1e3a5f", borderRadius: 7, cursor: "pointer", fontSize: 12, padding: "5px 12px" }}>
+              重新整理
+            </button>
           </div>
+
           {docs.length === 0 ? (
-            <p style={{ color: "#64748b", fontSize: 14, textAlign: "center", padding: "32px 0" }}>尚未上傳任何文件</p>
+            <div style={{ textAlign: "center", padding: "48px 0", color: "#374151" }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>📂</div>
+              <p style={{ fontSize: 14 }}>尚未上傳任何文件</p>
+              <p style={{ fontSize: 12, marginTop: 4 }}>上傳後即可在對話頁提問</p>
+            </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {docs.map(doc => (
-                <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "#0d1117", borderRadius: 8, border: "1px solid #1e3a5f" }}>
-                  <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${TYPE_COLORS[doc.file_type] || "#64748b"}22`, color: TYPE_COLORS[doc.file_type] || "#94a3b8" }}>
-                    {(doc.file_type || "txt").toUpperCase()}
-                  </span>
-                  <span style={{ flex: 1, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.filename}</span>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>{doc.chunk_count} 段</span>
-                  <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, background: `${STATUS_COLORS[doc.status] || "#64748b"}22`, color: STATUS_COLORS[doc.status] || "#94a3b8" }}>
-                    {STATUS_LABELS[doc.status] || doc.status}
-                  </span>
-                  <button onClick={() => deleteDoc(doc.id)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
+                <div key={doc.id}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "#0d1117", borderRadius: 10, border: "1px solid #1a2f50", transition: "border-color 0.15s" }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = "#1e3a5f")}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = "#1a2f50")}>
+                  {/* File type icon */}
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: `${TYPE_COLORS[doc.file_type] || "#64748b"}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0, border: `1px solid ${TYPE_COLORS[doc.file_type] || "#64748b"}33` }}>
+                    {TYPE_ICONS[doc.file_type] || "📄"}
+                  </div>
+                  {/* File info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#d1d5db" }}>{doc.filename}</div>
+                    <div style={{ fontSize: 11, color: "#374151", marginTop: 2 }}>
+                      <span style={{ color: TYPE_COLORS[doc.file_type] || "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{doc.file_type}</span>
+                      {doc.chunk_count > 0 && <span> · {doc.chunk_count} 個段落</span>}
+                    </div>
+                  </div>
+                  {/* Status */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    {doc.status !== "ready" && doc.status !== "error" && (
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: STATUS_COLORS[doc.status], animation: "pulse 1.5s infinite" }} />
+                    )}
+                    <span style={{ padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: `${STATUS_COLORS[doc.status] || "#64748b"}18`, color: STATUS_COLORS[doc.status] || "#94a3b8", border: `1px solid ${STATUS_COLORS[doc.status] || "#64748b"}33` }}>
+                      {STATUS_LABELS[doc.status] || doc.status}
+                    </span>
+                  </div>
+                  {/* Delete */}
+                  <button onClick={() => deleteDoc(doc.id)}
+                    style={{ color: "#374151", background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px", borderRadius: 6, flexShrink: 0, transition: "color 0.15s" }}
+                    onMouseEnter={e => ((e.target as HTMLElement).style.color = "#ef4444")}
+                    onMouseLeave={e => ((e.target as HTMLElement).style.color = "#374151")}>
+                    ×
+                  </button>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
     </div>
   );
 }

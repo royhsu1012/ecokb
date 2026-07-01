@@ -33,7 +33,7 @@ jobs:
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          NODE_ENV: production
+          NEXT_PUBLIC_BASE_PATH: /ecokb
         run: npm run build
 
       - name: Deploy to gh-pages branch

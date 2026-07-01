@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { Logo } from "@/components/Logo";
 
 type NodeType = "document" | "keyword" | "topic";
 interface GraphNode { id: string; label: string; type: NodeType; meta: Record<string, string>; x?: number; y?: number; vx?: number; vy?: number; }
@@ -109,8 +110,9 @@ export default function GraphPage() {
     <div style={{ height: "100vh", background: "#0d1117", color: "#e2e8f0", display: "flex", flexDirection: "column" }}>
       {/* Topbar */}
       <div style={{ padding: "12px 20px", borderBottom: "1px solid #1e3a5f", display: "flex", alignItems: "center", gap: 12, background: "#0d1f3c" }}>
-        <button onClick={() => router.push("/chat")} style={{ color: "#94a3b8", background: "none", border: "none", cursor: "pointer", fontSize: 20 }}>←</button>
-        <span style={{ fontWeight: 700 }}>知識圖譜</span>
+        <button onClick={() => router.push("/chat")} className="btn-ghost" style={{ fontSize: 13, padding: "5px 10px" }}>← 返回對話</button>
+        <Logo size={24} showText={false} />
+        <span style={{ fontWeight: 700, fontSize: 14 }}>知識圖譜</span>
         <div style={{ display: "flex", gap: 6, marginLeft: 16 }}>
           {filterBtns.map(([val, label, color]) => (
             <button key={val} onClick={() => setFilter(val)}

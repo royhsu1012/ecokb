@@ -3,11 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { getSession, clearSession } from "@/lib/auth";
-
-interface Message { role: "user" | "assistant"; content: string; }
-interface Conversation { id: string; title: string; messages: Message[]; }
-
-const DEMO = typeof window !== "undefined" && localStorage.getItem("access_token") === "demo-token";
+import { Logo } from "@/components/Logo";
+import type { Message, Conversation } from "@/lib/types";
 
 const DEMO_MESSAGES: Message[] = [
   { role: "user", content: "什麼是菲利普斯曲線？" },
@@ -154,10 +151,7 @@ export default function ChatPage() {
       <div style={{ width: 256, background: "#0a1628", borderRight: "1px solid #1a2f50", display: "flex", flexDirection: "column", flexShrink: 0 }}>
         {/* Logo */}
         <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid #1a2f50" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#7c3aed,#2d7dd2)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 800, fontSize: 13, boxShadow: "0 2px 8px rgba(124,58,237,0.4)" }}>E</div>
-            <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.3px" }}>EconKB</span>
-          </div>
+          <Logo size={30} fontSize={15} />
         </div>
 
         {/* New chat button */}
@@ -228,10 +222,8 @@ export default function ChatPage() {
                 <p style={{ color: "#475569", fontSize: 14, margin: 0, textAlign: "center", lineHeight: 1.6 }}>上傳文件後開始提問<br />AI 將根據你的知識庫內容回答並標註來源</p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
                   {["什麼是菲利普斯曲線？", "解釋量化寬鬆政策", "GDP 與 GNP 的差異"].map(q => (
-                    <button key={q} onClick={() => { setInput(q); textareaRef.current?.focus(); }}
-                      style={{ padding: "8px 14px", borderRadius: 20, background: "transparent", color: "#64748b", border: "1px solid #1e3a5f", cursor: "pointer", fontSize: 13, transition: "all 0.15s" }}
-                      onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = "#7c3aed"; (e.target as HTMLElement).style.color = "#a78bfa"; }}
-                      onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = "#1e3a5f"; (e.target as HTMLElement).style.color = "#64748b"; }}>
+                    <button key={q} className="suggestion-chip"
+                      onClick={() => { setInput(q); textareaRef.current?.focus(); }}>
                       {q}
                     </button>
                   ))}

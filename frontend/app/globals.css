@@ -28,6 +28,54 @@ body {
 
 .glow-purple { box-shadow: 0 0 60px 20px rgba(124, 58, 237, 0.15); }
 
+/* Pulse animation for processing status indicators */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.pulse { animation: pulse 1.5s infinite; }
+
+/* Ghost button — neutral bordered, highlights on hover */
+.btn-ghost {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 12px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-ghost:hover { border-color: var(--primary); color: #a78bfa; }
+
+/* Delete button — hidden until hover */
+.del-btn {
+  color: #374151;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+.del-btn:hover { color: #ef4444; }
+
+/* Document row hover border brightening */
+.doc-row { transition: border-color 0.15s; }
+.doc-row:hover { border-color: var(--border) !important; }
+
+/* Suggestion chips on empty chat state */
+.suggestion-chip {
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: transparent;
+  color: #64748b;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.suggestion-chip:hover { border-color: var(--primary); color: #a78bfa; }
+
 .typing-dot { animation: typing 1.2s infinite; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }

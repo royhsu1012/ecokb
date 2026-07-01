@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/auth";
+import { Logo } from "@/components/Logo";
+import type { Document } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "#f59e0b", parsing: "#3b82f6", ocr: "#8b5cf6",
@@ -19,9 +21,7 @@ const TYPE_ICONS: Record<string, string> = {
   pdf: "📄", docx: "📝", txt: "📃", csv: "📊", xlsx: "📊", jpg: "🖼️", png: "🖼️",
 };
 
-const DEMO = typeof window !== "undefined" && localStorage.getItem("access_token") === "demo-token";
-
-const DEMO_DOCS = [
+const DEMO_DOCS: Document[] = [
   { id: "1", filename: "Macroeconomics_Ch5.pdf", file_type: "pdf", status: "ready", chunk_count: 42, created_at: new Date().toISOString() },
   { id: "2", filename: "Phillips_Curve_Notes.docx", file_type: "docx", status: "ready", chunk_count: 18, created_at: new Date().toISOString() },
   { id: "3", filename: "GDP_Data_2024.csv", file_type: "csv", status: "embedding", chunk_count: 0, created_at: new Date().toISOString() },
@@ -33,7 +33,7 @@ export default function AdminPage() {
   const [session, setSession] = useState<{ userId: string; email: string } | null>(null);
   const [kbId, setKbId] = useState("");
   const [tab, setTab] = useState<"upload" | "manual">("upload");
-  const [docs, setDocs] = useState<any[]>([]);
+  const [docs, setDocs] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string[]>([]);
   const [manualText, setManualText] = useState("");
@@ -110,7 +110,7 @@ export default function AdminPage() {
         <button onClick={() => router.push("/chat")}
           style={{ color: "#475569", background: "rgba(255,255,255,0.04)", border: "1px solid #1e3a5f", borderRadius: 8, cursor: "pointer", fontSize: 13, padding: "6px 12px" }}>← 返回對話</button>
         <div style={{ width: 1, height: 20, background: "#1e3a5f" }} />
-        <div style={{ width: 26, height: 26, borderRadius: 7, background: "linear-gradient(135deg,#7c3aed,#2d7dd2)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 800, fontSize: 11 }}>E</div>
+        <Logo size={26} showText={false} />
         <span style={{ fontWeight: 700, fontSize: 14 }}>管理後台</span>
         {isDemo.current && <span style={{ fontSize: 11, color: "#0fc6c2", padding: "2px 8px", background: "rgba(15,198,194,0.08)", borderRadius: 6, border: "1px solid rgba(15,198,194,0.2)", fontWeight: 600 }}>DEMO</span>}
         <div style={{ marginLeft: "auto", display: "flex", gap: 16, fontSize: 12, color: "#475569" }}>
@@ -218,26 +218,20 @@ export default function AdminPage() {
                   {/* Status */}
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                     {doc.status !== "ready" && doc.status !== "error" && (
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: STATUS_COLORS[doc.status], animation: "pulse 1.5s infinite" }} />
+                      <div className="pulse" style={{ width: 6, height: 6, borderRadius: "50%", background: STATUS_COLORS[doc.status] }} />
                     )}
                     <span style={{ padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: `${STATUS_COLORS[doc.status] || "#64748b"}18`, color: STATUS_COLORS[doc.status] || "#94a3b8", border: `1px solid ${STATUS_COLORS[doc.status] || "#64748b"}33` }}>
                       {STATUS_LABELS[doc.status] || doc.status}
                     </span>
                   </div>
                   {/* Delete */}
-                  <button onClick={() => deleteDoc(doc.id)}
-                    style={{ color: "#374151", background: "none", border: "none", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "4px", borderRadius: 6, flexShrink: 0, transition: "color 0.15s" }}
-                    onMouseEnter={e => ((e.target as HTMLElement).style.color = "#ef4444")}
-                    onMouseLeave={e => ((e.target as HTMLElement).style.color = "#374151")}>
-                    ×
-                  </button>
+                  <button className="del-btn" onClick={() => deleteDoc(doc.id)} style={{ flexShrink: 0 }}>×</button>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
     </div>
   );
 }

@@ -19,3 +19,8 @@ export function getSession() {
   if (!token || !userId) return null;
   return { token, userId, email: email || "" };
 }
+
+export function isDemo(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("access_token") === "demo-token";
+}

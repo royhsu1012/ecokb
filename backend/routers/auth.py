@@ -61,6 +61,6 @@ async def login(req: LoginRequest, sb: AsyncClient = Depends(get_supabase)):
 
 
 @router.post("/logout")
-async def logout(sb: AsyncClient = Depends(get_supabase)):
-    await sb.auth.sign_out()
+async def logout():
+    # JWT is stateless; actual invalidation happens client-side by clearing the token.
     return {"message": "Logged out"}

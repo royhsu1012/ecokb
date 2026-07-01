@@ -1,10 +1,10 @@
-import asyncio
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, BackgroundTasks
 from supabase import AsyncClient
 from services.supabase_client import get_supabase
 from services.parser import detect_file_type, sha256, parse_file, chunk_text
 from services.embedding import embed_batch
 from services.storage import store_file, delete_file
+from dependencies import get_current_user
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -47,12 +47,21 @@ async def _process_document(doc_id: str, kb_id: str, data: bytes, file_type: str
 async def upload_document(
     background_tasks: BackgroundTasks,
     kb_id: str = Form(...),
-    user_id: str = Form(...),
     file: UploadFile = File(...),
     sb: AsyncClient = Depends(get_supabase),
+    current_user: dict = Depends(get_current_user),
 ):
+    user_id = current_user["user_id"]
+
     data = await file.read()
+    if len(data) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large (max 50MB)")
     file_hash = sha256(data)
+
+    # Verify kb belongs to this user
+    kb = await sb.table("knowledge_bases").select("id").eq("id", kb_id).eq("user_id", user_id).execute()
+    if not kb.data:
+        raise HTTPException(status_code=403, detail="Knowledge base not found or access denied")
 
     # Dedup check
     existing = await sb.table("documents").select("id").eq("hash", file_hash).eq("kb_id", kb_id).execute()
@@ -61,7 +70,6 @@ async def upload_document(
 
     file_type = detect_file_type(data, file.filename or "", file.content_type or "")
 
-    # Upload to Google Drive
     drive_info = await store_file(data, user_id, file.filename or "upload", file.content_type or "application/octet-stream")
 
     doc = await sb.table("documents").insert({
@@ -82,14 +90,22 @@ async def upload_document(
 
 
 @router.get("/kb/{kb_id}")
-async def list_documents(kb_id: str, sb: AsyncClient = Depends(get_supabase)):
-    result = await sb.table("documents").select("*").eq("kb_id", kb_id).order("created_at", desc=True).execute()
+async def list_documents(
+    kb_id: str,
+    sb: AsyncClient = Depends(get_supabase),
+    current_user: dict = Depends(get_current_user),
+):
+    result = await sb.table("documents").select("*").eq("kb_id", kb_id).eq("user_id", current_user["user_id"]).order("created_at", desc=True).execute()
     return result.data
 
 
 @router.delete("/{doc_id}")
-async def delete_document(doc_id: str, sb: AsyncClient = Depends(get_supabase)):
-    doc = await sb.table("documents").select("drive_file_id").eq("id", doc_id).single().execute()
+async def delete_document(
+    doc_id: str,
+    sb: AsyncClient = Depends(get_supabase),
+    current_user: dict = Depends(get_current_user),
+):
+    doc = await sb.table("documents").select("drive_file_id").eq("id", doc_id).eq("user_id", current_user["user_id"]).single().execute()
     if not doc.data:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -107,8 +123,12 @@ async def delete_document(doc_id: str, sb: AsyncClient = Depends(get_supabase)):
 
 
 @router.get("/{doc_id}/status")
-async def get_document_status(doc_id: str, sb: AsyncClient = Depends(get_supabase)):
-    result = await sb.table("documents").select("status,chunk_count").eq("id", doc_id).single().execute()
+async def get_document_status(
+    doc_id: str,
+    sb: AsyncClient = Depends(get_supabase),
+    current_user: dict = Depends(get_current_user),
+):
+    result = await sb.table("documents").select("status,chunk_count").eq("id", doc_id).eq("user_id", current_user["user_id"]).single().execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Document not found")
     return result.data

@@ -47,10 +47,10 @@ create policy "Users read own chunks" on chunks
     )
   );
 
--- IVFFlat index for cosine similarity search
+-- HNSW index for cosine similarity search (works well at any data size, no vacuum needed)
 create index if not exists chunks_embedding_idx
-  on chunks using ivfflat (embedding vector_cosine_ops)
-  with (lists = 100);
+  on chunks using hnsw (embedding vector_cosine_ops)
+  with (m = 16, ef_construction = 64);
 
 -- RPC function for vector search with kb_id filter
 create or replace function match_chunks(

@@ -10,6 +10,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   });
+  if (res.status === 401) {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("kb_id");
+    window.location.href = "/";
+    throw new Error("Session expired");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || "Request failed");
@@ -32,8 +39,8 @@ export const api = {
   },
   kb: {
     list: (user_id: string) => request<any[]>(`/chat/kb/${user_id}`),
-    create: (user_id: string, name: string) =>
-      request("/chat/kb", { method: "POST", body: JSON.stringify({ user_id, name }) }),
+    create: (name: string) =>
+      request("/chat/kb", { method: "POST", body: JSON.stringify({ name }) }),
   },
   documents: {
     list: (kb_id: string) => request<any[]>(`/documents/kb/${kb_id}`),
@@ -50,7 +57,10 @@ export const api = {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+        throw new Error(err.detail || "Upload failed");
+      }
       return res.json();
     },
   },

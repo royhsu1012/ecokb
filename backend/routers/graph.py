@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from supabase import AsyncClient
+from supabase._async.client import AsyncClient
 from services.supabase_client import get_supabase
 from dependencies import get_current_user
 

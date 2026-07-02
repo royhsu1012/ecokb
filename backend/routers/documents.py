@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, BackgroundTasks
-from supabase import AsyncClient
+from supabase._async.client import AsyncClient
 from services.supabase_client import get_supabase
 from services.parser import detect_file_type, sha256, parse_file, chunk_text
 from services.embedding import embed_batch

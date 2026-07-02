@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
-from supabase import AsyncClient
+from supabase._async.client import AsyncClient
 from services.supabase_client import get_supabase
 from config import get_settings
 

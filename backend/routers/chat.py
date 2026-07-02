@@ -2,7 +2,7 @@ import json
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from supabase import AsyncClient
+from supabase._async.client import AsyncClient
 from services.supabase_client import get_supabase
 from services.rag import search_chunks, build_context
 from services.llm import stream_answer, complete_answer

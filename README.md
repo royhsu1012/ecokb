@@ -1,196 +1,135 @@
 # EconKB
 
-類似 NotebookLM 的經濟學知識庫平台，支援多格式文件上傳、OCR、RAG 向量問答與 D3.js 知識圖譜。
+RAG 知識庫問答平台（類 NotebookLM）。上傳 PDF / Word / Excel 文件，以自然語言提問，AI 根據知識庫內容回答並引用來源。
 
-**Frontend**: https://ecokb.vercel.app  
-**GitHub Pages**: https://royhsu1012.github.io/ecokb/  
-**Repo**: https://github.com/royhsu1012/ecokb
+**線上展示**：[ecokb.vercel.app](https://ecokb.vercel.app)（Demo 模式無需帳號）
 
 ---
 
-## 技術棧
+## 技術棧（零成本）
 
-| 層級 | 技術 |
-|------|------|
-| Frontend | Next.js 14 · Tailwind CSS · D3.js |
-| Backend | FastAPI (Python 3.11) |
-| 向量資料庫 | Supabase + pgvector |
-| Embeddings | OpenAI text-embedding-3-small |
-| 問答 / OCR | Claude claude-sonnet-4-6 (Anthropic) |
-| 文件存儲 | Google Drive Service Account |
-| 部署 | Vercel (frontend) · Railway (backend) |
-
----
-
-## 功能
-
-- **多格式上傳**：PDF、DOCX、TXT、CSV、JPG、PNG
-- **自動 OCR**：掃描版 PDF 與圖片透過 Claude Vision 辨識
-- **SHA-256 去重**：相同檔案只存一份
-- **RAG 問答**：Top-5 向量搜尋 + Claude 生成含來源引用的答案，SSE 串流輸出
-- **知識圖譜**：D3.js 力向圖，節點含文件、主題、關鍵詞三種類型
-- **文件狀態機**：`pending → parsing → embedding → ready / error`
+| 層級 | 技術 | 費用 |
+|------|------|------|
+| 前端 | Next.js 14 App Router（靜態匯出） | Vercel 免費 |
+| 後端 | FastAPI + Python 3.11 | Render 免費 |
+| LLM | Google Gemini 2.0 Flash | 免費（15 RPM）|
+| Embedding | Google text-embedding-004（768 維）| 免費 |
+| 向量 DB | Supabase pgvector（HNSW index）| 免費 |
+| 檔案儲存 | Supabase Storage | 免費（1GB）|
+| 認證 | Supabase Auth（JWT）| 免費 |
 
 ---
 
-## 專案結構
+## 目錄結構
 
 ```
 ecokb/
-├── frontend/                 # Next.js 14 (Vercel)
+├── frontend/               # Next.js 14 前端
 │   ├── app/
-│   │   ├── page.tsx          # 登入 / 註冊
-│   │   ├── chat/page.tsx     # RAG 問答（SSE streaming）
-│   │   ├── admin/page.tsx    # 管理後台（文件上傳 / 刪除）
-│   │   └── graph/page.tsx    # D3.js 知識圖譜
+│   │   ├── page.tsx        # 登入頁（含 Demo 模式）
+│   │   ├── chat/page.tsx   # 問答對話介面
+│   │   ├── admin/page.tsx  # 文件管理後台
+│   │   └── graph/page.tsx  # 知識圖譜（D3.js）
+│   ├── components/
+│   │   └── Logo.tsx        # 共用 Logo 元件
 │   └── lib/
-│       ├── api.ts            # API 呼叫統一入口
-│       └── auth.ts           # localStorage session
-│
-├── backend/                  # FastAPI (Railway)
+│       ├── api.ts          # API 呼叫層
+│       ├── auth.ts         # Session 管理（含 isDemo()）
+│       └── types.ts        # 共用型別定義
+├── backend/                # FastAPI 後端
 │   ├── main.py
-│   ├── config.py             # pydantic-settings 環境變數
+│   ├── config.py           # 環境變數設定
+│   ├── dependencies.py     # JWT 驗證（get_current_user）
 │   ├── routers/
-│   │   ├── auth.py           # 登入 / 註冊 / 登出
-│   │   ├── documents.py      # 上傳 / 刪除 / 狀態查詢
-│   │   ├── chat.py           # RAG 問答 + 知識庫 CRUD
-│   │   └── graph.py          # 知識圖譜節點與邊
+│   │   ├── auth.py         # 登入 / 註冊
+│   │   ├── chat.py         # SSE 串流問答
+│   │   ├── documents.py    # 文件上傳、向量化
+│   │   └── graph.py        # 知識圖譜資料
 │   └── services/
-│       ├── embedding.py      # OpenAI embeddings（可換）
-│       ├── llm.py            # Claude 問答（可換）
-│       ├── ocr.py            # Claude Vision OCR
-│       ├── storage.py        # Google Drive（可換）
-│       ├── parser.py         # 解析 PDF / DOCX / CSV / 圖片
-│       ├── rag.py            # 向量搜尋 + context 組裝
+│       ├── llm.py          # Gemini 2.0 Flash 串流
+│       ├── embedding.py    # Google text-embedding-004
+│       ├── storage.py      # Supabase Storage
+│       ├── rag.py          # 向量搜尋 + 上下文建構
+│       ├── parser.py       # PDF / Word / Excel 解析
 │       └── supabase_client.py
-│
-└── supabase/
-    └── schema.sql            # DDL · pgvector · RLS · match_chunks RPC
+├── supabase/
+│   └── schema.sql          # 資料表 + HNSW index + RPC 函式
+└── docs/
+    └── decisions/          # ADR 架構決策文件
 ```
 
 ---
 
 ## 本地開發
 
-### 1. 建立 Supabase 專案
-
-1. 到 [supabase.com](https://supabase.com) 新增專案
-2. SQL Editor 執行 `supabase/schema.sql`
-3. 複製 Project Settings → API 的 `URL`、`anon key`、`service_role key`
-
-### 2. Google Drive Service Account
-
-1. [Google Cloud Console](https://console.cloud.google.com) → 建立 Service Account → 下載 JSON 金鑰
-2. Google Drive 建立根資料夾，把 Service Account email 加為編輯者
-3. 複製資料夾 ID（URL `folders/` 後的部分）
-
-### 3. 啟動 Backend
-
-```bash
-cd backend
-cp .env.example .env
-# 填入所有環境變數（見下表）
-
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
-```
-
-### 4. 啟動 Frontend
+### 前端
 
 ```bash
 cd frontend
-echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
-
 npm install
-npm run dev
-# 開啟 http://localhost:3000
+npm run dev          # http://localhost:3000
+npx tsc --noEmit     # 型別檢查
+npm run build        # 完整 build 驗證
+```
+
+### 後端
+
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env   # 填入環境變數後執行
+uvicorn main:app --reload --port 8000
+```
+
+`.env` 需填入：
+
+```
+GOOGLE_API_KEY=        # 從 aistudio.google.com/apikey 取得
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_KEY=
+ADMIN_SECRET_KEY=      # 管理員註冊金鑰（自訂字串）
+CORS_ORIGINS=http://localhost:3000
 ```
 
 ---
 
-## 部署
+## 部署步驟
 
-### Backend → Railway
+### 1. 取得 Google API Key（免費）
 
-1. 登入 [railway.app](https://railway.app)，新增專案並連結此 repo
-2. Root Directory 設為 `backend`（Railway 會自動讀取 `Procfile`）
-3. Variables 填入所有環境變數
-4. Deploy，取得 URL（如 `https://ecokb-backend.up.railway.app`）
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Get API Key
 
-### Frontend → Vercel
+### 2. 建立 Supabase 專案（免費）
 
-已自動透過 GitHub 連結部署。更新環境變數：
+1. [supabase.com](https://supabase.com) 建立新專案
+2. SQL Editor → 貼上並執行 `supabase/schema.sql`
+3. Storage → New Bucket → 名稱 `documents` → Public ✅
+4. Settings → API → 複製 URL、anon key、service_role key
 
-Vercel → Project → Settings → Environment Variables：
-```
-NEXT_PUBLIC_API_URL=https://ecokb-backend.up.railway.app
-```
+### 3. 部署後端到 Render（免費）
 
----
+1. [render.com](https://render.com) → New Web Service → 連接 GitHub → `ecokb`
+2. Root Directory → `backend`
+3. 填入 Environment Variables（參考 `backend/.env.example`）
 
-## 環境變數
+### 4. 部署前端到 Vercel（免費）
 
-### Backend (`backend/.env`)
-
-| 變數 | 說明 |
-|------|------|
-| `ANTHROPIC_API_KEY` | Claude API 金鑰（`sk-ant-...`） |
-| `OPENAI_API_KEY` | OpenAI Embedding 金鑰（`sk-...`） |
-| `SUPABASE_URL` | Supabase 專案 URL |
-| `SUPABASE_ANON_KEY` | Supabase 匿名金鑰 |
-| `SUPABASE_SERVICE_KEY` | Supabase 服務金鑰（繞過 RLS） |
-| `GOOGLE_DRIVE_ROOT_FOLDER_ID` | Drive 根資料夾 ID |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Service Account 整個 JSON 字串（單行） |
-| `ADMIN_SECRET_KEY` | 管理員註冊用密鑰，自訂字串即可 |
-| `CORS_ORIGINS` | 允許的前端來源，逗號分隔（如 `http://localhost:3000,https://ecokb.vercel.app`） |
-
-### Frontend (`frontend/.env.local`)
-
-| 變數 | 說明 |
-|------|------|
-| `NEXT_PUBLIC_API_URL` | Backend URL |
+1. 連接 GitHub repo
+2. Settings → Production Branch → `master`
+3. Settings → Ignored Build Step → `[ "$VERCEL_GIT_COMMIT_REF" != "gh-pages" ]`
+4. Environment Variables → `NEXT_PUBLIC_API_URL` = Render URL
 
 ---
 
-## API 端點
+## 架構決策
 
-| 方法 | 路徑 | 說明 |
+重要設計決策記錄在 [`docs/decisions/`](docs/decisions/)：
+
+| 編號 | 主題 | 狀態 |
 |------|------|------|
-| POST | `/auth/register` | 註冊（含管理員 key 欄位） |
-| POST | `/auth/login` | 登入，回傳 JWT |
-| POST | `/auth/logout` | 登出 |
-| GET  | `/chat/kb/{user_id}` | 列出知識庫 |
-| POST | `/chat/kb` | 建立知識庫 |
-| POST | `/chat/ask` | RAG 問答（SSE streaming） |
-| POST | `/documents/upload` | 上傳文件（背景非同步處理） |
-| GET  | `/documents/kb/{kb_id}` | 列出知識庫下的文件 |
-| GET  | `/documents/{doc_id}/status` | 查詢文件處理狀態 |
-| DELETE | `/documents/{doc_id}` | 刪除文件 |
-| GET  | `/graph/{kb_id}` | 知識圖譜節點與邊 |
-
----
-
-## 文件處理流程
-
-```
-上傳檔案
-  │
-  ├─ SHA-256 去重（相同檔案跳過）
-  │
-  ├─ Magic Bytes 偵測真實類型
-  │
-  ├─ Google Drive 存檔（per-user 子資料夾）
-  │
-  ├─ 解析
-  │    ├─ PDF 文字版  → PyMuPDF
-  │    ├─ PDF 掃描版  → Claude Vision OCR（< 100 字觸發）
-  │    ├─ DOCX        → mammoth
-  │    ├─ CSV / XLSX  → pandas
-  │    └─ JPG / PNG   → Claude Vision OCR
-  │
-  ├─ 切段（400 字 / 80 字重疊）
-  │
-  ├─ OpenAI Embedding（text-embedding-3-small，1536 維）
-  │
-  └─ 存入 Supabase pgvector → 狀態更新為 ready
-```
+| [ADR-001](docs/decisions/001-static-export-vercel.md) | 前端靜態匯出部署至 Vercel | 採用 |
+| [ADR-002](docs/decisions/002-pgvector-supabase.md) | 向量儲存採用 Supabase pgvector | 採用 |
+| [ADR-003](docs/decisions/003-sse-streaming.md) | LLM 回答採用 SSE 串流 | 採用 |
+| [ADR-004](docs/decisions/004-google-drive-storage.md) | 檔案儲存（已棄用 Google Drive）| 棄用 |
+| [ADR-005](docs/decisions/005-zero-cost-stack.md) | 零成本技術棧重構 | 採用 |

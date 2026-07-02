@@ -38,7 +38,7 @@ async def _process_document(doc_id: str, kb_id: str, data: bytes, file_type: str
         await sb.table("chunks").insert(rows).execute()
         await sb.table("documents").update({"status": "ready", "chunk_count": len(chunks)}).eq("id", doc_id).execute()
 
-    except Exception as e:
+    except Exception:
         await sb.table("documents").update({"status": "error"}).eq("id", doc_id).execute()
         raise
 
@@ -58,19 +58,17 @@ async def upload_document(
         raise HTTPException(status_code=413, detail="File too large (max 50MB)")
     file_hash = sha256(data)
 
-    # Verify kb belongs to this user
     kb = await sb.table("knowledge_bases").select("id").eq("id", kb_id).eq("user_id", user_id).execute()
     if not kb.data:
         raise HTTPException(status_code=403, detail="Knowledge base not found or access denied")
 
-    # Dedup check
     existing = await sb.table("documents").select("id").eq("hash", file_hash).eq("kb_id", kb_id).execute()
     if existing.data:
         raise HTTPException(status_code=409, detail="File already exists in this knowledge base")
 
     file_type = detect_file_type(data, file.filename or "", file.content_type or "")
 
-    drive_info = await store_file(data, user_id, file.filename or "upload", file.content_type or "application/octet-stream")
+    storage_info = await store_file(sb, data, user_id, file.filename or "upload", file.content_type or "application/octet-stream")
 
     doc = await sb.table("documents").insert({
         "kb_id": kb_id,
@@ -79,8 +77,8 @@ async def upload_document(
         "file_type": file_type,
         "status": "pending",
         "hash": file_hash,
-        "drive_file_id": drive_info["drive_file_id"],
-        "drive_url": drive_info["drive_url"],
+        "drive_file_id": storage_info["drive_file_id"],
+        "drive_url": storage_info["drive_url"],
     }).execute()
 
     doc_id = doc.data[0]["id"]
@@ -111,12 +109,9 @@ async def delete_document(
 
     await sb.table("chunks").delete().eq("doc_id", doc_id).execute()
 
-    drive_file_id = doc.data.get("drive_file_id")
-    if drive_file_id:
-        try:
-            await delete_file(drive_file_id)
-        except Exception:
-            pass
+    storage_path = doc.data.get("drive_file_id")
+    if storage_path:
+        await delete_file(sb, storage_path)
 
     await sb.table("documents").delete().eq("id", doc_id).execute()
     return {"message": "Deleted"}

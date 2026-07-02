@@ -1,21 +1,37 @@
-import voyageai
+import asyncio
+import google.generativeai as genai
 from config import get_settings
 
-_client: voyageai.AsyncClient | None = None
+_configured = False
 
 
-def _get_client() -> voyageai.AsyncClient:
-    global _client
-    if _client is None:
-        _client = voyageai.AsyncClient(api_key=get_settings().voyage_api_key)
-    return _client
+def _ensure_configured() -> None:
+    global _configured
+    if not _configured:
+        genai.configure(api_key=get_settings().google_api_key)
+        _configured = True
 
 
 async def embed_text(text: str) -> list[float]:
-    result = await _get_client().embed([text], model="voyage-3-lite")
-    return result.embeddings[0]
+    _ensure_configured()
+    result = await asyncio.to_thread(
+        genai.embed_content,
+        model="models/text-embedding-004",
+        content=text,
+        task_type="retrieval_document",
+    )
+    return result["embedding"]
 
 
 async def embed_batch(texts: list[str]) -> list[list[float]]:
-    result = await _get_client().embed(texts, model="voyage-3-lite")
-    return result.embeddings
+    _ensure_configured()
+    results = await asyncio.gather(*[
+        asyncio.to_thread(
+            genai.embed_content,
+            model="models/text-embedding-004",
+            content=t,
+            task_type="retrieval_document",
+        )
+        for t in texts
+    ])
+    return [r["embedding"] for r in results]

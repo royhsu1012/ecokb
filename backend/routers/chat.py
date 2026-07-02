@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from supabase import AsyncClient
 from services.supabase_client import get_supabase
 from services.rag import search_chunks, build_context
-from services.llm import generate_answer
+from services.llm import stream_answer, complete_answer
 from dependencies import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -24,7 +24,6 @@ async def ask(
     sb: AsyncClient = Depends(get_supabase),
     current_user: dict = Depends(get_current_user),
 ):
-    # Verify kb belongs to current user
     kb = await sb.table("knowledge_bases").select("id").eq("id", req.kb_id).eq("user_id", current_user["user_id"]).execute()
     if not kb.data:
         raise HTTPException(status_code=403, detail="Knowledge base not found or access denied")
@@ -42,13 +41,12 @@ async def ask(
 
     if req.stream:
         async def _stream():
-            async with generate_answer(req.question, context, stream=True) as s:
-                async for text in s.text_stream:
-                    yield "data: " + json.dumps({"text": text}) + "\n\n"
+            async for text in stream_answer(req.question, context):
+                yield "data: " + json.dumps({"text": text}) + "\n\n"
             yield "data: [DONE]\n\n"
         return StreamingResponse(_stream(), media_type="text/event-stream")
 
-    answer = await generate_answer(req.question, context, stream=False)
+    answer = await complete_answer(req.question, context)
     sources = [{"index": i + 1, "content": c["content"][:200]} for i, c in enumerate(chunks)]
     return {"answer": answer, "sources": sources}
 
@@ -63,7 +61,6 @@ async def list_kbs(
     sb: AsyncClient = Depends(get_supabase),
     current_user: dict = Depends(get_current_user),
 ):
-    # Only allow listing own KBs
     if user_id != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Access denied")
     result = await sb.table("knowledge_bases").select("*").eq("user_id", user_id).execute()

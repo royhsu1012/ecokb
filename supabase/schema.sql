@@ -21,8 +21,8 @@ create table if not exists documents (
   file_type text,
   status text default 'pending',
   hash text,
-  drive_file_id text,
-  drive_url text,
+  drive_file_id text,  -- stores Supabase Storage path: {user_id}/{filename}
+  drive_url text,      -- stores public URL
   chunk_count int default 0,
   created_at timestamptz default now()
 );
@@ -30,14 +30,14 @@ alter table documents enable row level security;
 create policy "Users manage own docs" on documents
   using (auth.uid() = user_id);
 
--- Chunks with vector embeddings
+-- Chunks with vector embeddings (768 dims = Google text-embedding-004)
 create table if not exists chunks (
   id uuid primary key default gen_random_uuid(),
   doc_id uuid references documents on delete cascade,
   kb_id uuid references knowledge_bases on delete cascade,
   content text,
   chunk_index int,
-  embedding vector(512)
+  embedding vector(768)
 );
 alter table chunks enable row level security;
 create policy "Users read own chunks" on chunks
@@ -54,7 +54,7 @@ create index if not exists chunks_embedding_idx
 
 -- RPC function for vector search with kb_id filter
 create or replace function match_chunks(
-  query_embedding vector(512),
+  query_embedding vector(768),
   match_kb_id uuid,
   match_count int default 5
 )
@@ -78,3 +78,8 @@ as $$
   order by c.embedding <=> query_embedding
   limit match_count;
 $$;
+
+-- ============================================================
+-- 手動步驟：在 Supabase Dashboard 建立 Storage Bucket
+-- Storage → New Bucket → Name: documents → Public: true
+-- ============================================================

@@ -37,7 +37,7 @@ create table if not exists chunks (
   kb_id uuid references knowledge_bases on delete cascade,
   content text,
   chunk_index int,
-  embedding vector(1536)
+  embedding vector(512)
 );
 alter table chunks enable row level security;
 create policy "Users read own chunks" on chunks
@@ -54,7 +54,7 @@ create index if not exists chunks_embedding_idx
 
 -- RPC function for vector search with kb_id filter
 create or replace function match_chunks(
-  query_embedding vector(1536),
+  query_embedding vector(512),
   match_kb_id uuid,
   match_count int default 5
 )

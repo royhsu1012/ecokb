@@ -1,27 +1,21 @@
-from openai import AsyncOpenAI
+import voyageai
 from config import get_settings
 
-_client: AsyncOpenAI | None = None
+_client: voyageai.AsyncClient | None = None
 
 
-def _get_client() -> AsyncOpenAI:
+def _get_client() -> voyageai.AsyncClient:
     global _client
     if _client is None:
-        _client = AsyncOpenAI(api_key=get_settings().openai_api_key)
+        _client = voyageai.AsyncClient(api_key=get_settings().voyage_api_key)
     return _client
 
 
 async def embed_text(text: str) -> list[float]:
-    response = await _get_client().embeddings.create(
-        model="text-embedding-3-small",
-        input=text,
-    )
-    return response.data[0].embedding
+    result = await _get_client().embed([text], model="voyage-3-lite")
+    return result.embeddings[0]
 
 
 async def embed_batch(texts: list[str]) -> list[list[float]]:
-    response = await _get_client().embeddings.create(
-        model="text-embedding-3-small",
-        input=texts,
-    )
-    return [d.embedding for d in sorted(response.data, key=lambda x: x.index)]
+    result = await _get_client().embed(texts, model="voyage-3-lite")
+    return result.embeddings

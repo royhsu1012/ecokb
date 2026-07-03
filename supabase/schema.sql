@@ -21,8 +21,8 @@ create table if not exists documents (
   file_type text,
   status text default 'pending',
   hash text,
-  drive_file_id text,  -- stores Supabase Storage path: {user_id}/{filename}
-  drive_url text,      -- stores public URL
+  storage_path text,   -- Supabase Storage path: {user_id}/{filename}
+  public_url text,     -- Supabase Storage public URL
   chunk_count int default 0,
   created_at timestamptz default now()
 );
@@ -78,6 +78,35 @@ as $$
   order by c.embedding <=> query_embedding
   limit match_count;
 $$;
+
+-- Conversations（對話持久化）
+create table if not exists conversations (
+  id uuid primary key default gen_random_uuid(),
+  kb_id uuid references knowledge_bases on delete cascade,
+  user_id uuid references auth.users on delete cascade,
+  title text default '新對話',
+  created_at timestamptz default now()
+);
+alter table conversations enable row level security;
+create policy "Users manage own conversations" on conversations
+  using (auth.uid() = user_id);
+
+create table if not exists messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid references conversations on delete cascade,
+  role text not null check (role in ('user', 'assistant')),
+  content text not null,
+  created_at timestamptz default now()
+);
+alter table messages enable row level security;
+create policy "Users read own messages" on messages
+  using (
+    exists (
+      select 1 from conversations c where c.id = messages.conversation_id and c.user_id = auth.uid()
+    )
+  );
+
+create index if not exists messages_conversation_idx on messages (conversation_id, created_at);
 
 -- ============================================================
 -- 手動步驟：在 Supabase Dashboard 建立 Storage Bucket

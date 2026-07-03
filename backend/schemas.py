@@ -22,3 +22,8 @@ class ChatRequest(BaseModel):
 
 class KBRequest(BaseModel):
     name: str
+
+
+class ConversationRequest(BaseModel):
+    kb_id: str = ""
+    title: str = "新對話"

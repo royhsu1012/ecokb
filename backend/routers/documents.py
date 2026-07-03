@@ -75,8 +75,8 @@ async def upload_document(
         "file_type": file_type,
         "status": "pending",
         "hash": file_hash,
-        "drive_file_id": storage_info["drive_file_id"],
-        "drive_url": storage_info["drive_url"],
+        "storage_path": storage_info["storage_path"],
+        "public_url": storage_info["public_url"],
     }).execute()
 
     doc_id = doc.data[0]["id"]
@@ -101,13 +101,13 @@ async def delete_document(
     sb: AsyncClient = Depends(get_supabase),
     current_user: dict = Depends(get_current_user),
 ):
-    doc = await sb.table("documents").select("drive_file_id").eq("id", doc_id).eq("user_id", current_user["user_id"]).limit(1).execute()
+    doc = await sb.table("documents").select("storage_path").eq("id", doc_id).eq("user_id", current_user["user_id"]).limit(1).execute()
     if not doc.data:
         raise HTTPException(status_code=404, detail="Document not found")
 
     await sb.table("chunks").delete().eq("doc_id", doc_id).execute()
 
-    storage_path = doc.data[0].get("drive_file_id")
+    storage_path = doc.data[0].get("storage_path")
     if storage_path:
         await delete_file(sb, storage_path)
 

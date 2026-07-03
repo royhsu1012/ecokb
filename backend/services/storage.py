@@ -19,7 +19,7 @@ async def store_file(
         file_options={"content-type": mime_type, "upsert": "true"},
     )
     url = sb.storage.from_(BUCKET).get_public_url(path)
-    return {"drive_file_id": path, "drive_url": url}
+    return {"storage_path": path, "public_url": url}
 
 
 async def delete_file(sb: AsyncClient, storage_path: str) -> None:

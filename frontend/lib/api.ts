@@ -1,4 +1,4 @@
-import type { Document } from "./types";
+import type { Document, Message } from "./types";
 import { clearSession } from "./auth";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -68,8 +68,21 @@ export const api = {
       return res.json();
     },
   },
+  conversations: {
+    list: (kb_id: string) =>
+      request<{ id: string; title: string; created_at: string }[]>(`/chat/conversations?kb_id=${encodeURIComponent(kb_id)}`),
+    create: (kb_id: string, title?: string) =>
+      request<{ id: string; title: string }>("/chat/conversations", {
+        method: "POST",
+        body: JSON.stringify({ kb_id, title: title || "新對話" }),
+      }),
+    messages: (id: string) => request<Message[]>(`/chat/conversations/${id}/messages`),
+    rename: (id: string, title: string) =>
+      request(`/chat/conversations/${id}`, { method: "PATCH", body: JSON.stringify({ title }) }),
+    delete: (id: string) => request(`/chat/conversations/${id}`, { method: "DELETE" }),
+  },
   chat: {
-    ask: async (kb_id: string, question: string, onChunk: (text: string) => void) => {
+    ask: async (kb_id: string, question: string, onChunk: (text: string) => void, conversation_id?: string) => {
       const token = localStorage.getItem("access_token");
       const res = await fetch(`${BASE}/chat/ask`, {
         method: "POST",
@@ -77,7 +90,7 @@ export const api = {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ kb_id, question, stream: true }),
+        body: JSON.stringify({ kb_id, question, stream: true, conversation_id: conversation_id || null }),
       });
       if (res.status === 401) handleUnauthorized();
       if (!res.ok) {

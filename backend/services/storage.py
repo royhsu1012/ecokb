@@ -18,7 +18,7 @@ async def store_file(
         file_bytes,
         file_options={"content-type": mime_type, "upsert": "true"},
     )
-    url = sb.storage.from_(BUCKET).get_public_url(path)
+    url = await sb.storage.from_(BUCKET).get_public_url(path)
     return {"storage_path": path, "public_url": url}
 
 

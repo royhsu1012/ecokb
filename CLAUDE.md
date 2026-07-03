@@ -124,8 +124,18 @@ cd frontend && npm run build
 - `chat.py` 使用 `async for text in stream_answer(...)` 驅動 SSE
 - **不要** 用 `async with` 包 `stream_answer`（它是 AsyncGenerator，非 context manager）
 
+## RAG 混合模式（ADR-006）
+- 有相關資料 → 嚴格引用標 `[來源 N]`；無相關資料 → AI 通用知識回答並加前綴 `GENERAL_DISCLAIMER`
+- 切換依據是相似度門檻 `SIMILARITY_THRESHOLD = 0.6`（`services/rag.py`），**不是** 檢索筆數（`match_chunks` 永遠回傳 top-k）
+- `services/llm.py` 拆 `GROUNDED_SYSTEM_PROMPT` / `GENERAL_SYSTEM_PROMPT` 兩種提示，共用底層 `_stream` / `_complete`
+- 調整引用鬆緊只需改 `SIMILARITY_THRESHOLD`
+
 ## 關鍵注意事項
-- Supabase Storage bucket 名稱：`documents`（需在 Dashboard 手動建立，Public）
+- Supabase Storage bucket 名稱：`documents`（需在 Dashboard 手動建立，Public，並加 storage.objects RLS 政策）
+- Supabase Auth 需關閉 "Confirm email" 否則新用戶註冊後無法登入
 - HNSW index（非 IVFFlat），不需要最低資料量
-- Embedding 維度：768（Google gemini-embedding-001），schema 已對應
+- Embedding 維度：768（Google gemini-embedding-001，`output_dimensionality=768`），schema 已對應
+- LLM 用 `gemini-2.5-flash`（`gemini-2.0-flash` 免費額度為 0）
+- Supabase Python client 需 >=2.16 才支援新版 key（`sb_secret_`）；`get_public_url` 為 async 需 await
 - Render 免費方案閒置 15 分鐘後 sleep，冷啟動約 30 秒
+- 部署管線：push `main` → Vercel（前端原生建置）+ Render（後端）自動部署

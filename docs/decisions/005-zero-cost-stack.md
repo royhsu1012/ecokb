@@ -36,3 +36,16 @@ date: 2026-07
 **升級路徑**
 - 流量增大後：Gemini 付費方案 or 切回 Anthropic Claude
 - Render 冷啟動影響體驗：升級 Render 付費方案（$7/月）或遷移至 Fly.io
+
+## 實作補充（2026-07 上線實測）
+
+線上部署時發現免費層模型有變動，最終採用的實際模型：
+
+| 用途 | 原計畫 | 實際採用 | 原因 |
+|------|--------|----------|------|
+| LLM | `gemini-2.0-flash` | `gemini-2.5-flash` | 2.0-flash 免費額度已降為 0（`limit: 0`）|
+| Embedding | `text-embedding-004` | `gemini-embedding-001` | text-embedding-004 已從 API 下線（404）|
+
+- Embedding 用 `output_dimensionality=768` 對齊既有 `vector(768)` schema，免資料庫遷移
+- Supabase 新版 API key（`sb_secret_` / `sb_publishable_`）非 JWT 格式，需 `supabase>=2.16`（本專案用 2.31.0）
+- 統一 Gemini 設定層 `services/gemini.py`，換模型只需改一處常數

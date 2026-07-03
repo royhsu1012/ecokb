@@ -103,13 +103,13 @@ async def delete_document(
     sb: AsyncClient = Depends(get_supabase),
     current_user: dict = Depends(get_current_user),
 ):
-    doc = await sb.table("documents").select("drive_file_id").eq("id", doc_id).eq("user_id", current_user["user_id"]).single().execute()
+    doc = await sb.table("documents").select("drive_file_id").eq("id", doc_id).eq("user_id", current_user["user_id"]).limit(1).execute()
     if not doc.data:
         raise HTTPException(status_code=404, detail="Document not found")
 
     await sb.table("chunks").delete().eq("doc_id", doc_id).execute()
 
-    storage_path = doc.data.get("drive_file_id")
+    storage_path = doc.data[0].get("drive_file_id")
     if storage_path:
         await delete_file(sb, storage_path)
 
@@ -123,7 +123,7 @@ async def get_document_status(
     sb: AsyncClient = Depends(get_supabase),
     current_user: dict = Depends(get_current_user),
 ):
-    result = await sb.table("documents").select("status,chunk_count").eq("id", doc_id).eq("user_id", current_user["user_id"]).single().execute()
+    result = await sb.table("documents").select("status,chunk_count").eq("id", doc_id).eq("user_id", current_user["user_id"]).limit(1).execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Document not found")
-    return result.data
+    return result.data[0]

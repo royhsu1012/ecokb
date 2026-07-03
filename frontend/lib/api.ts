@@ -78,13 +78,27 @@ export const api = {
         },
         body: JSON.stringify({ kb_id, question, stream: true }),
       });
+      if (res.status === 401) {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("kb_id");
+        window.location.href = "/";
+        throw new Error("Session expired");
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(err.detail || "Request failed");
+      }
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       if (!reader) return;
+      let buffer = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const lines = decoder.decode(value).split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
         for (const line of lines) {
           if (line.startsWith("data: ")) {
             const data = line.slice(6);

@@ -15,12 +15,14 @@ async def register(req: RegisterRequest, sb: AsyncClient = Depends(get_supabase)
 
     try:
         res = await sb.auth.sign_up({"email": req.email, "password": req.password})
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        # 內部細節僅記錄於伺服器，對外泛化避免資訊洩漏 / 使用者列舉
+        print(f"[auth] register failed: {e}")
+        raise HTTPException(status_code=400, detail="註冊失敗，請確認 email 格式與密碼強度後再試")
 
     user = res.user
     if not user:
-        raise HTTPException(status_code=400, detail="Registration failed")
+        raise HTTPException(status_code=400, detail="註冊失敗，請稍後再試")
 
     # Create default knowledge base
     await sb.table("knowledge_bases").insert({

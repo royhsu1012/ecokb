@@ -9,10 +9,10 @@ import type { Document } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "#f59e0b", parsing: "#3b82f6", ocr: "#8b5cf6",
-  embedding: "#06b6d4", ready: "#10b981", error: "#ef4444",
+  embedding: "#06b6d4", ready: "#10b981", empty: "#94a3b8", error: "#ef4444",
 };
 const STATUS_LABELS: Record<string, string> = {
-  pending: "等待", parsing: "解析中", ocr: "OCR", embedding: "向量化", ready: "完成", error: "錯誤",
+  pending: "等待", parsing: "解析中", ocr: "OCR", embedding: "向量化", ready: "完成", empty: "無內容", error: "錯誤",
 };
 const TYPE_COLORS: Record<string, string> = {
   pdf: "#7c3aed", docx: "#2d7dd2", txt: "#10b981",
@@ -58,6 +58,15 @@ export default function AdminPage() {
     try { setDocs(await api.documents.list(kb)); } catch {}
   }
 
+  // 處理中的文件自動輪詢，直到全部到達終態（完成/無內容/錯誤）
+  useEffect(() => {
+    if (isDemo.current || !kbId) return;
+    const hasProcessing = docs.some(d => !["ready", "empty", "error"].includes(d.status));
+    if (!hasProcessing) return;
+    const timer = setInterval(() => loadDocs(kbId), 3000);
+    return () => clearInterval(timer);
+  }, [docs, kbId]);
+
   async function uploadFiles(files: FileList | File[]) {
     if (!kbId || !session || isDemo.current) {
       if (isDemo.current) { alert("Demo 模式下無法真實上傳，後端連接後即可使用。"); return; }
@@ -101,7 +110,7 @@ export default function AdminPage() {
   }
 
   const readyDocs = docs.filter(d => d.status === "ready");
-  const processingDocs = docs.filter(d => !["ready", "error"].includes(d.status));
+  const processingDocs = docs.filter(d => !["ready", "empty", "error"].includes(d.status));
   const errorDocs = docs.filter(d => d.status === "error");
 
   return (

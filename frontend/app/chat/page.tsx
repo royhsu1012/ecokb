@@ -159,8 +159,13 @@ export default function ChatPage() {
         answer += chunk;
         appendToLastMessage(convId!, answer);
       }, convId);
-    } catch {
-      appendToLastMessage(convId!, "發生錯誤，請重試。");
+      // 串流結束但完全沒有內容（如 200 卻無 chunk）→ 給提示，避免留下永久空白氣泡
+      if (answer === "") appendToLastMessage(convId!, "（沒有收到回應，請重試）");
+    } catch (e: any) {
+      // 401 已由 api 層清 session 並跳轉，不覆寫成誤導的「發生錯誤」
+      if (e?.message !== "Session expired") {
+        appendToLastMessage(convId!, "發生錯誤，請重試。");
+      }
     } finally {
       setThinking(false);
     }

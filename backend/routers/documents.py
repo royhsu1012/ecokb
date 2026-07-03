@@ -8,39 +8,43 @@ from dependencies import get_current_user, require_kb_ownership
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+
+async def _set_status(sb: AsyncClient, doc_id: str, fields: dict) -> None:
+    """狀態更新獨立包 try，避免更新本身失敗導致文件永久卡在中間狀態。"""
+    try:
+        await sb.table("documents").update(fields).eq("id", doc_id).execute()
+    except Exception as e:  # noqa: BLE001
+        print(f"[process] status update failed for {doc_id}: {e}")
+
 
 async def _process_document(doc_id: str, kb_id: str, data: bytes, file_type: str, sb: AsyncClient):
     try:
-        await sb.table("documents").update({"status": "parsing"}).eq("id", doc_id).execute()
+        await _set_status(sb, doc_id, {"status": "parsing"})
 
         text = await parse_file(data, file_type)
 
-        await sb.table("documents").update({"status": "embedding"}).eq("id", doc_id).execute()
-
         chunks = chunk_text(text, size=400, overlap=80)
         if not chunks:
-            await sb.table("documents").update({"status": "ready", "chunk_count": 0}).eq("id", doc_id).execute()
+            # 有檔案但解析不出內容（空白/純圖無字）→ 標 empty 而非 ready，避免誤導
+            await _set_status(sb, doc_id, {"status": "empty", "chunk_count": 0})
             return
 
+        await _set_status(sb, doc_id, {"status": "embedding"})
         embeddings = await embed_batch(chunks)
 
         rows = [
-            {
-                "doc_id": doc_id,
-                "kb_id": kb_id,
-                "content": chunk,
-                "chunk_index": i,
-                "embedding": emb,
-            }
+            {"doc_id": doc_id, "kb_id": kb_id, "content": chunk, "chunk_index": i, "embedding": emb}
             for i, (chunk, emb) in enumerate(zip(chunks, embeddings))
         ]
-
         await sb.table("chunks").insert(rows).execute()
-        await sb.table("documents").update({"status": "ready", "chunk_count": len(chunks)}).eq("id", doc_id).execute()
+        await _set_status(sb, doc_id, {"status": "ready", "chunk_count": len(chunks)})
 
-    except Exception:
-        await sb.table("documents").update({"status": "error"}).eq("id", doc_id).execute()
-        raise
+    except Exception as e:  # noqa: BLE001
+        # 背景任務無 caller 承接 raise，改為記錄並確保狀態落地為 error
+        print(f"[process] doc {doc_id} failed: {e}")
+        await _set_status(sb, doc_id, {"status": "error"})
 
 
 @router.post("/upload")
@@ -53,9 +57,17 @@ async def upload_document(
 ):
     user_id = current_user["user_id"]
 
-    data = await file.read()
-    if len(data) > 50 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File too large (max 50MB)")
+    # 有界讀取：逐塊累積，超過上限即中止，避免惡意超大 body 吃光記憶體（Render 免費方案）
+    data = b""
+    while True:
+        block = await file.read(1024 * 1024)
+        if not block:
+            break
+        data += block
+        if len(data) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="File too large (max 50MB)")
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty file")
     file_hash = sha256(data)
 
     await require_kb_ownership(sb, kb_id, user_id)

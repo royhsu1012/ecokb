@@ -2,7 +2,7 @@ export interface Document {
   id: string;
   filename: string;
   file_type: string;
-  status: "pending" | "parsing" | "ocr" | "embedding" | "ready" | "error";
+  status: "pending" | "parsing" | "ocr" | "embedding" | "ready" | "empty" | "error";
   chunk_count: number;
   created_at: string;
 }

@@ -185,7 +185,7 @@ export default function ChatPage() {
         <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 500 }}>模型</span>
-            <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600, padding: "2px 8px", background: "var(--accent-soft)", borderRadius: 6, border: "1px solid var(--accent-border)" }}>gemini-2.0-flash</span>
+            <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600, padding: "2px 8px", background: "var(--accent-soft)", borderRadius: 6, border: "1px solid var(--accent-border)" }}>gemini-2.5-flash</span>
             {isDemo.current && <span style={{ fontSize: 11, color: "var(--info)", padding: "2px 8px", background: "transparent", borderRadius: 6, border: "1px solid var(--info)", fontWeight: 600 }}>DEMO</span>}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

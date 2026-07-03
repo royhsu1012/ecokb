@@ -12,8 +12,8 @@ RAG 知識庫問答平台（類 NotebookLM）。上傳 PDF / Word / Excel 文件
 |------|------|------|
 | 前端 | Next.js 14 App Router（靜態匯出） | Vercel 免費 |
 | 後端 | FastAPI + Python 3.11 | Render 免費 |
-| LLM | Google Gemini 2.0 Flash | 免費（15 RPM）|
-| Embedding | Google text-embedding-004（768 維）| 免費 |
+| LLM | Google Gemini 2.5 Flash | 免費（15 RPM）|
+| Embedding | Google gemini-embedding-001（768 維）| 免費 |
 | 向量 DB | Supabase pgvector（HNSW index）| 免費 |
 | 檔案儲存 | Supabase Storage | 免費（1GB）|
 | 認證 | Supabase Auth（JWT）| 免費 |
@@ -46,8 +46,8 @@ ecokb/
 │   │   ├── documents.py    # 文件上傳、向量化
 │   │   └── graph.py        # 知識圖譜資料
 │   └── services/
-│       ├── llm.py          # Gemini 2.0 Flash 串流
-│       ├── embedding.py    # Google text-embedding-004
+│       ├── llm.py          # Gemini 2.5 Flash 串流
+│       ├── embedding.py    # Google gemini-embedding-001
 │       ├── storage.py      # Supabase Storage
 │       ├── rag.py          # 向量搜尋 + 上下文建構
 │       ├── parser.py       # PDF / Word / Excel 解析

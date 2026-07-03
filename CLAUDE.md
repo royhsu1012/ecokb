@@ -5,7 +5,7 @@ RAG 知識庫問答平台（類 NotebookLM），分為前後端兩部分。
 
 - **前端**：Next.js 14 App Router，靜態匯出（`output: 'export'`），部署在 Vercel（ecokb.vercel.app）
 - **後端**：FastAPI + Supabase pgvector，部署至 Render（免費方案）
-- **AI**：Google Gemini 2.0 Flash（LLM）、Google text-embedding-004（向量，768 維）
+- **AI**：Google Gemini 2.5 Flash（LLM）、Google gemini-embedding-001（向量，768 維）
 - **儲存**：Supabase Storage（文件檔案）+ Supabase DB（向量、元資料）
 
 ## 目錄結構
@@ -36,7 +36,7 @@ ecokb/
 │   └── services/
 │       ├── gemini.py      # Gemini 統一設定層（模型常數、configure、get_model）
 │       ├── llm.py         # 串流問答（asyncio queue 橋接）
-│       ├── embedding.py   # text-embedding-004（768 維，Semaphore(8) 限流）
+│       ├── embedding.py   # gemini-embedding-001（768 維，Semaphore(8) 限流）
 │       ├── ocr.py         # Gemini Vision OCR
 │       └── storage.py     # Supabase Storage bucket "documents"
 ├── supabase/schema.sql    # vector(768)，HNSW index
@@ -127,5 +127,5 @@ cd frontend && npm run build
 ## 關鍵注意事項
 - Supabase Storage bucket 名稱：`documents`（需在 Dashboard 手動建立，Public）
 - HNSW index（非 IVFFlat），不需要最低資料量
-- Embedding 維度：768（Google text-embedding-004），schema 已對應
+- Embedding 維度：768（Google gemini-embedding-001），schema 已對應
 - Render 免費方案閒置 15 分鐘後 sleep，冷啟動約 30 秒

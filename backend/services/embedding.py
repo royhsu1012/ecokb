@@ -2,7 +2,7 @@ import asyncio
 
 from google.genai import types
 
-from services.gemini import EMBEDDING_MODEL, get_client
+from services.gemini import EMBEDDING_MODEL, EMBEDDING_DIM, get_client
 
 # Google 免費方案 embedding API 有速率限制，限制並發避免 429
 _semaphore = asyncio.Semaphore(8)
@@ -12,7 +12,7 @@ def _embed_sync(text: str, task_type: str) -> list[float]:
     result = get_client().models.embed_content(
         model=EMBEDDING_MODEL,
         contents=text,
-        config=types.EmbedContentConfig(task_type=task_type),
+        config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=EMBEDDING_DIM),
     )
     return list(result.embeddings[0].values)
 

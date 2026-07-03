@@ -5,8 +5,9 @@
 from google import genai
 from config import get_settings
 
-LLM_MODEL = "gemini-2.0-flash"
-EMBEDDING_MODEL = "text-embedding-004"
+LLM_MODEL = "gemini-2.5-flash"
+EMBEDDING_MODEL = "gemini-embedding-001"
+EMBEDDING_DIM = 768  # 對齊 supabase schema vector(768)；gemini-embedding-001 預設 3072，此處降維
 
 _client: genai.Client | None = None
 

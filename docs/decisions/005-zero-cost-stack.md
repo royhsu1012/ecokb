@@ -14,8 +14,8 @@ date: 2026-07
 
 | 元件 | 原方案 | 新方案 | 費用 |
 |------|--------|--------|------|
-| LLM | Anthropic Claude | Google Gemini 2.0 Flash | $0（15 RPM 免費） |
-| Embedding | OpenAI text-embedding-3-small (1536d) | Google text-embedding-004 (768d) | $0（同一 API key） |
+| LLM | Anthropic Claude | Google Gemini 2.5 Flash | $0（15 RPM 免費） |
+| Embedding | OpenAI text-embedding-3-small (1536d) | Google gemini-embedding-001 (768d) | $0（同一 API key） |
 | 檔案儲存 | Google Drive API | Supabase Storage | $0（1GB 免費） |
 | 後端部署 | Railway ($5/月) | Render (免費方案) | $0 |
 
@@ -29,7 +29,7 @@ date: 2026-07
 - Supabase Storage 與現有 DB 同平台，維運更簡單
 
 **限制**
-- Gemini 2.0 Flash 免費方案限制 15 RPM（每分鐘 15 次請求）
+- Gemini 2.5 Flash 免費方案限制 15 RPM（每分鐘 15 次請求）
 - Render 免費方案閒置 15 分鐘後 sleep，第一次請求冷啟動約 30 秒
 - Embedding 維度從 1536 → 768（查詢精度略降，但實測差異小）
 

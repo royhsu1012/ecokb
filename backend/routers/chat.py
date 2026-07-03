@@ -48,9 +48,10 @@ async def ask(
             async for text in stream_answer(req.question, context):
                 full_answer.append(text)
                 yield "data: " + json.dumps({"text": text}) + "\n\n"
-            yield "data: [DONE]\n\n"
+            # 在送出 [DONE] 前先保存，避免客戶端斷線導致 generator 被取消、訊息遺失
             if req.conversation_id:
                 await _save_messages(sb, req.conversation_id, req.question, "".join(full_answer))
+            yield "data: [DONE]\n\n"
         return StreamingResponse(_stream(), media_type="text/event-stream")
 
     answer = await complete_answer(req.question, context)

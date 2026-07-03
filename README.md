@@ -2,24 +2,24 @@
 
 # 📚 EconKB
 
-### RAG 知識庫問答平台
+### RAG 知識庫問答平台 — 架構展示
 
-上傳 PDF / Word / Excel / 圖片，以自然語言提問，AI 根據你的文件內容回答並引用來源。<br/>
-知識庫有資料時嚴格引用、無資料時改用 AI 通用知識並標註——類 NotebookLM 的零成本實作。
+上傳 PDF / Word / Excel / 圖片，以自然語言提問，AI 根據文件內容回答並引用來源；<br/>
+知識庫有資料時嚴格引用、無資料時改用 AI 通用知識並標註。類 NotebookLM 的**零成本全棧**實作。
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?logo=fastapi&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?logo=supabase&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-8E75B2?logo=google&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-前端-black?logo=vercel)
-![Render](https://img.shields.io/badge/Render-後端-46E3B7?logo=render&logoColor=white)
+![Cloudflare](https://img.shields.io/badge/Vercel%20%2B%20Render-部署-black?logo=vercel)
 
 ![Cost](https://img.shields.io/badge/成本-%240%2F月-brightgreen)
-![Embedding](https://img.shields.io/badge/向量-768維-blue)
+![Vector](https://img.shields.io/badge/向量-768維%20HNSW-blue)
 ![RAG](https://img.shields.io/badge/RAG-混合模式-orange)
-![Theme](https://img.shields.io/badge/主題-日夜雙模式-informational)
+![ADR](https://img.shields.io/badge/ADR-6%20篇-informational)
+![Tests](https://img.shields.io/badge/pytest-passing-success)
 
-🌐 [線上展示](https://ecokb.vercel.app) · 📖 [API 端點](#-api-端點) · 🏗 [架構決策](docs/decisions/) · 🎨 [設計系統](CLAUDE.md)
+🌐 [線上系統](https://ecokb.vercel.app) · 🏗 [設計系統](CLAUDE.md) · 📐 [架構決策記錄](docs/decisions/)
 
 </div>
 
@@ -27,46 +27,51 @@
 
 ## 目錄
 
-- [功能概覽](#-功能概覽)
-- [系統架構](#-系統架構)
-- [部署架構](#-部署架構零成本)
-- [技術棧](#-技術棧)
-- [快速啟動](#-快速啟動本機開發)
-- [文件處理 Pipeline](#-文件處理-pipeline)
-- [RAG 檢索邏輯](#-rag-檢索邏輯混合模式)
-- [API 端點](#-api-端點)
-- [資料庫設計](#-資料庫設計)
-- [部署步驟](#-部署步驟)
-- [架構決策](#-架構決策)
+- [系統概覽](#系統概覽)
+- [技術棧](#技術棧)
+- [架構總覽](#架構總覽)
+- [核心工程決策](#核心工程決策)
+- [資料庫設計](#資料庫設計)
+- [文件處理管道](#文件處理管道)
+- [RAG 檢索邏輯](#rag-檢索邏輯)
+- [前端設計系統](#前端設計系統)
+- [部署架構](#部署架構)
+- [可觀測性](#可觀測性)
+- [架構決策記錄](#架構決策記錄adr)
+- [治理框架](#治理框架)
+- [線上展示](#線上展示)
 
 ---
 
-## ✨ 功能概覽
+## 系統概覽
 
-### 🔍 RAG 問答（核心）
-- 向量檢索 + Gemini 生成，回答標註 `[來源 N]` 引用段落
-- **混合模式**：知識庫有相關資料 → 嚴格引用；無相關資料 → AI 通用知識回答並標註「此回答來自 AI 通用知識」
-- 相似度門檻 `0.6` 自動判斷是否切換模式（切題 0.7+、不切題 0.5）
-- SSE 串流即時輸出，逐字顯示
-
-### 📄 文件處理
-- 支援 PDF · Word · Excel · CSV · TXT · JPG · PNG（最大 50MB）
-- 掃描檔 / 圖片自動 Gemini Vision OCR
-- 自動分段（chunk）+ 向量化（768 維），非同步背景處理
-- 即時狀態：等待 → 解析 → 向量化 → 完成
-
-### 💬 對話管理
-- 對話持久化，重新整理不遺失
-- 多對話側欄、自動命名、歷史訊息懶載入
-- Demo 模式免帳號試用
-
-### 🎨 介面
-- Claude 風格日夜雙主題，一鍵切換（localStorage 持久化、防閃爍）
-- 🕸 知識圖譜（D3.js force graph）視覺化文件與關鍵詞關係
+| 面向 | 內容 |
+|------|------|
+| 定位 | RAG 知識庫問答平台（類 NotebookLM），單一使用者多知識庫 |
+| 輸入 | PDF · Word · Excel · CSV · TXT · JPG · PNG（最大 50MB）|
+| 檢索 | Supabase pgvector（HNSW cosine）+ 相似度門檻混合模式 |
+| 生成 | Google Gemini 2.5 Flash，SSE 串流、引用 `[來源 N]` |
+| 儲存 | Supabase Storage（原檔）+ pgvector（向量）+ Auth（JWT）|
+| 成本 | 全棧 **$0 / 月**，單一 `GOOGLE_API_KEY` + Supabase 憑證 |
 
 ---
 
-## 🏗 系統架構
+## 技術棧
+
+| 層次 | 技術 |
+|------|------|
+| 前端 | Next.js 14 App Router · TypeScript · 靜態匯出（`output: 'export'`）· D3.js |
+| 後端 | Python 3.11 · FastAPI · uvicorn · asyncio |
+| 資料庫 | Supabase PostgreSQL · pgvector · HNSW index · `match_chunks` RPC |
+| LLM / 向量 | Gemini 2.5 Flash · gemini-embedding-001（768 維）· Gemini Vision（OCR）|
+| 檔案解析 | PyMuPDF（PDF）· mammoth（Word）· pandas（Excel/CSV）|
+| 認證 | Supabase Auth · Bearer JWT · RLS |
+| 部署 | Vercel（前端原生建置）· Render（後端）· push `main` 自動部署 |
+| 測試 | pytest · TestClient · dependency override |
+
+---
+
+## 架構總覽
 
 ```
 ┌─────────────────┐        ┌──────────────────────┐        ┌─────────────────┐
@@ -75,84 +80,66 @@
 │                 │───────▶│                      │───────▶│  pgvector (768) │
 │  · 登入 / 對話   │  JWT   │  · SSE 串流問答       │        │  Storage bucket │
 │  · 管理後台      │◀───────│  · 文件向量化         │◀───────│  Auth (JWT)     │
-│  · 知識圖譜      │  SSE   │  · KB 擁有權驗證      │        │                 │
+│  · 知識圖譜      │  SSE   │  · KB 擁有權驗證      │        │  RLS            │
 └─────────────────┘        └──────────┬───────────┘        └─────────────────┘
                                        │
                                        ▼
                             ┌──────────────────────┐
                             │   Google Gemini API   │
-                            │  · 2.5 Flash（LLM）   │
-                            │  · embedding-001（向量）│
+                            │  2.5 Flash · embed-001 │
                             │  · Vision（OCR）      │
                             └──────────────────────┘
 ```
 
----
-
-## 🚀 部署架構（零成本）
-
-| 服務 | 平台 | 方案 | 說明 |
-|------|------|------|------|
-| 前端 | Vercel | 免費 | `push main` 自動原生建置 Next.js |
-| 後端 | Render | 免費 | 閒置 15 分鐘 sleep，冷啟動約 30 秒 |
-| 資料庫 / 向量 | Supabase | 免費 | pgvector + HNSW index |
-| 檔案儲存 | Supabase Storage | 免費 | 1GB bucket `documents` |
-| 認證 | Supabase Auth | 免費 | JWT |
-| AI | Google Gemini | 免費 | 15 RPM |
-
-> 單一 `GOOGLE_API_KEY` + Supabase 憑證即可運作，全棧 **$0 / 月**。
+前後端**完全分離**：前端純靜態檔、後端純 API，中間僅靠 HTTP + JWT，可獨立部署與演進。
 
 ---
 
-## 🧰 技術棧
+## 核心工程決策
 
-| 層級 | 技術 |
-|------|------|
-| 前端 | Next.js 14 App Router · TypeScript · 靜態匯出（`output: 'export'`）|
-| 後端 | FastAPI · Python 3.11 · uvicorn · asyncio |
-| LLM | Google Gemini 2.5 Flash |
-| Embedding | Google gemini-embedding-001（768 維，`output_dimensionality`）|
-| 向量 DB | Supabase pgvector · HNSW（cosine）· `match_chunks` RPC |
-| 檔案解析 | PyMuPDF（PDF）· mammoth（Word）· pandas（Excel/CSV）· Gemini Vision（OCR）|
-| 認證 | Supabase Auth · Bearer JWT |
-| 視覺化 | D3.js force graph |
-| 測試 | pytest（TestClient + dependency override）|
+### 1. 前後端完全分離 — 靜態匯出
+前端以 `output: 'export'` 產生純靜態檔部署 Vercel，無 SSR、無共用程式碼包。唯一接觸點是 `lib/api.ts`；後端 API 改動只需改這一個檔案。前端可 CDN 快取，後端可獨立擴充。
 
----
+### 2. asyncio.Queue 橋接同步 SDK 串流
+Gemini Python SDK 的串流是同步產生器，FastAPI SSE 需要 async。`services/llm.py` 用 `asyncio.Queue` + `run_in_executor` 把同步串流橋接成 `AsyncGenerator`，`chat.py` 以 `async for` 驅動 SSE，不阻塞事件迴圈。
 
-## ⚡ 快速啟動（本機開發）
+### 3. 統一 Gemini 設定層 — 換模型只改一處
+所有 Gemini 呼叫（LLM / embedding / OCR）都經 `services/gemini.py` 取用 client 與模型常數。上線時遇到 `gemini-2.0-flash` 免費額度歸零、`text-embedding-004` 下線，靠這層**只改兩個常數**即完成模型遷移。
 
-### 前端
-```bash
-cd frontend
-npm install
-npm run dev          # http://localhost:3000
-npx tsc --noEmit     # 型別檢查
-npm run build        # 完整 build 驗證
-```
+### 4. RAG 混合模式 — 用相似度門檻而非筆數
+`match_chunks` 永遠回傳最接近的 top-k（即使不相關），故「檢索 0 筆」無法判斷有無資料。改用**相似度門檻 0.6**（實測切題 0.7+、不切題 0.5）：高於門檻走嚴格引用，低於則改用 AI 通用知識並前綴標註來源。
 
-### 後端
-```bash
-cd backend
-pip install -r requirements.txt
-cp .env.example .env   # 填入環境變數
-uvicorn main:app --reload --port 8000
-pytest tests/ -q       # 執行測試
-```
+### 5. Embedding 降維對齊 schema — 免資料庫遷移
+`gemini-embedding-001` 預設 3072 維，但既有 schema 為 `vector(768)`。以 `output_dimensionality=768` 於 API 端降維，cosine 相似度不受影響，避免重建索引與資料遷移。
 
-`.env`：
-```
-GOOGLE_API_KEY=        # aistudio.google.com/apikey
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_KEY=
-ADMIN_SECRET_KEY=      # 管理員註冊金鑰（自訂）
-CORS_ORIGINS=http://localhost:3000
-```
+### 6. HNSW 而非 IVFFlat
+pgvector 的 IVFFlat 需要足夠資料量才建立有效分群，資料少時查詢退化。改用 **HNSW（cosine）**，任何資料量都有穩定近鄰搜尋、無最低筆數限制、免 vacuum 重訓。
+
+### 7. 雙層授權 — RLS + 應用層擁有權
+Supabase 全表啟用 Row Level Security 作為資料層防線；後端另以 `require_kb_ownership(sb, kb_id, user_id)` 在應用層驗證知識庫擁有權。`user_id` 一律取自 JWT，**不接受** 從 body/form 傳入。
+
+### 8. 串流訊息在 [DONE] 前保存
+串流回答的持久化若放在送出 `[DONE]` 之後，客戶端收到 DONE 即斷線、generator 被取消，訊息遺失。將 `_save_messages` 移到 `[DONE]` **之前**執行，確保連線仍在時完成寫入。
 
 ---
 
-## 🔄 文件處理 Pipeline
+## 資料庫設計
+
+| 資料表 | 用途 | 關鍵欄位 |
+|--------|------|----------|
+| `knowledge_bases` | 知識庫 | `user_id`, `name` |
+| `documents` | 文件元資料 | `kb_id`, `status`, `storage_path`, `public_url`, `chunk_count` |
+| `chunks` | 向量段落 | `doc_id`, `kb_id`, `content`, `embedding vector(768)` |
+| `conversations` | 對話 | `kb_id`, `user_id`, `title` |
+| `messages` | 對話訊息 | `conversation_id`, `role`, `content` |
+
+- 全表啟用 RLS；`chunks` 建 HNSW index（cosine）
+- `match_chunks` RPC 依 `kb_id` 過濾後做相似度搜尋
+- Schema：[`supabase/schema.sql`](supabase/schema.sql)
+
+---
+
+## 文件處理管道
 
 ```
 上傳 → 大小/重複檢查 → Supabase Storage → 建立 document 紀錄
@@ -164,12 +151,13 @@ CORS_ORIGINS=http://localhost:3000
                               寫入 chunks 表 → 狀態更新為「完成」
 ```
 
-- 大檔用 `Semaphore(8)` 限制並發 embedding，避免撞 Gemini 免費版 rate limit
+- 大檔以 `Semaphore(8)` 限制並發 embedding，避免撞 Gemini 免費版 rate limit
 - PDF 每頁文字少於 100 字自動轉 Gemini Vision OCR
+- 狀態機：等待 → 解析 → 向量化 → 完成 / 錯誤，前端輪詢顯示
 
 ---
 
-## 🎯 RAG 檢索邏輯（混合模式）
+## RAG 檢索邏輯
 
 ```
 問題 → 向量化 → match_chunks（pgvector cosine top-5）
@@ -183,83 +171,43 @@ CORS_ORIGINS=http://localhost:3000
      標 [來源 N]）     前綴「此回答來自 AI 通用知識」）
 ```
 
-門檻定義於 `backend/services/rag.py` 的 `SIMILARITY_THRESHOLD`。
+門檻 `SIMILARITY_THRESHOLD` 定義於 `backend/services/rag.py`，可調整引用鬆緊。詳見 [ADR-006](docs/decisions/006-hybrid-rag-mode.md)。
 
 ---
 
-## 📡 API 端點
+## 前端設計系統
 
-| 方法 | 路徑 | 說明 |
-|------|------|------|
-| `POST` | `/auth/register` | 註冊（`admin_key` 判定管理員），自動建預設知識庫 |
-| `POST` | `/auth/login` | 登入，回傳 JWT |
-| `POST` | `/auth/logout` | 登出（JWT 無狀態，前端清除）|
-| `POST` | `/chat/ask` | SSE 串流問答（混合模式）|
-| `GET` | `/chat/kb/{user_id}` | 使用者知識庫清單 |
-| `POST` | `/chat/kb` | 建立知識庫 |
-| `GET` `POST` | `/chat/conversations` | 對話清單 / 建立對話 |
-| `GET` | `/chat/conversations/{id}/messages` | 對話歷史訊息 |
-| `PATCH` `DELETE` | `/chat/conversations/{id}` | 重新命名 / 刪除對話 |
-| `POST` | `/documents/upload` | 上傳文件（觸發背景向量化）|
-| `GET` | `/documents/kb/{kb_id}` | 文件清單 |
-| `GET` | `/documents/{id}/status` | 向量化狀態 |
-| `DELETE` | `/documents/{id}` | 刪除文件（含 chunks + Storage）|
-| `GET` | `/graph/{kb_id}` | 知識圖譜節點 / 連結 |
-| `GET` | `/health` | 健康檢查 |
-
-> 所有受保護路由注入 `Depends(get_current_user)`，`user_id` 一律取自 JWT；KB 存取經 `require_kb_ownership` 驗證。
+- **日夜雙主題**：語意色彩變數定義於 `app/globals.css`，夜間為預設、日間由 `html[data-theme="light"]` 覆蓋
+- 元件內一律用 `var(--*)` 語意變數，禁止 hardcode 色碼
+- `ThemeToggle` 寫入 `localStorage.theme`；`layout.tsx` 內嵌 script 在 hydration 前套用主題防閃爍（FOUC）
+- 對話頁拆分為 `ChatSidebar` / `MessageList` / `ChatInput`，狀態集中於 page
+- 頁面：`/` 登入 · `/chat` 對話 · `/admin` 管理後台 · `/graph` 知識圖譜（D3.js）
 
 ---
 
-## 🗄 資料庫設計
+## 部署架構
 
-| 資料表 | 用途 | 關鍵欄位 |
-|--------|------|----------|
-| `knowledge_bases` | 知識庫 | `user_id`, `name` |
-| `documents` | 文件元資料 | `kb_id`, `status`, `storage_path`, `public_url`, `chunk_count` |
-| `chunks` | 向量段落 | `doc_id`, `kb_id`, `content`, `embedding vector(768)` |
-| `conversations` | 對話 | `kb_id`, `user_id`, `title` |
-| `messages` | 對話訊息 | `conversation_id`, `role`, `content` |
+| 服務 | 平台 | 方案 | 觸發 |
+|------|------|------|------|
+| 前端 | Vercel | 免費 | push `main` → 原生建置 Next.js |
+| 後端 | Render | 免費 | push `main` → 重新部署（root `backend`）|
+| 資料庫 / 儲存 / 認證 | Supabase | 免費 | — |
+| AI | Google Gemini | 免費（15 RPM）| — |
 
-- 全表啟用 RLS（Row Level Security）
-- `chunks` 建 HNSW index（cosine）；`match_chunks` RPC 做相似度搜尋
-- Schema 定義於 [`supabase/schema.sql`](supabase/schema.sql)
+> Render 免費方案閒置 15 分鐘後 sleep，冷啟動約 30 秒。
 
 ---
 
-## 📦 部署步驟
+## 可觀測性
 
-<details>
-<summary>展開完整部署流程</summary>
-
-### 1. Google API Key
-[aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Get API Key
-
-### 2. Supabase
-1. 建立專案 → SQL Editor 執行 `supabase/schema.sql`
-2. Storage → New Bucket → `documents`（Public）
-3. Storage RLS 政策（SQL Editor）：
-   ```sql
-   create policy "documents read"   on storage.objects for select using (bucket_id = 'documents');
-   create policy "documents insert" on storage.objects for insert with check (bucket_id = 'documents');
-   create policy "documents delete" on storage.objects for delete using (bucket_id = 'documents');
-   ```
-4. Authentication → 關閉 "Confirm email"（MVP 免確認信）
-5. Settings → API → 複製 URL / anon / service_role key
-
-### 3. Render（後端）
-New Web Service → 連接 repo → Branch `main` → Root `backend` → 填入環境變數
-
-### 4. Vercel（前端）
-連接 repo → Production Branch `main` → `NEXT_PUBLIC_API_URL` = Render URL
-
-</details>
+- `GET /health` 健康檢查端點（不依賴 DB，供部署平台探活）
+- 文件處理狀態機落地於 `documents.status`，前端可即時輪詢
+- 後端例外統一由 FastAPI 例外處理轉為結構化錯誤回應
+- 前端 401 統一走 `handleUnauthorized()` 自動清除 session 並跳轉
 
 ---
 
-## 📐 架構決策
-
-重要設計決策記錄於 [`docs/decisions/`](docs/decisions/)：
+## 架構決策記錄（ADR）
 
 | 編號 | 主題 | 狀態 |
 |------|------|------|
@@ -272,8 +220,21 @@ New Web Service → 連接 repo → Branch `main` → Root `backend` → 填入�
 
 ---
 
+## 治理框架
+
+- **分層規範**：`routers/`（HTTP）· `services/`（業務）· `schemas.py`（請求模型）· `dependencies.py`（認證/授權），規則寫入 [CLAUDE.md](CLAUDE.md)
+- **測試**：pytest 覆蓋認證、授權、輸入驗證（TestClient + dependency override，免真實 DB）
+- **依賴掃描**：[Dependabot](.github/dependabot.yml) 週更 npm / pip、月更 GitHub Actions
+- **決策留痕**：所有重大設計以 ADR 記錄於 `docs/decisions/`
+
+---
+
+## 線上展示
+
+🌐 **[ecokb.vercel.app](https://ecokb.vercel.app)** — Demo 模式免帳號試用；或以管理員金鑰註冊後上傳自己的文件問答。
+
 <div align="center">
 
-以 ❤️ 打造 · 全棧零成本 · [線上體驗](https://ecokb.vercel.app)
+以 ❤️ 打造 · 全棧零成本 · 前後端完全分離
 
 </div>

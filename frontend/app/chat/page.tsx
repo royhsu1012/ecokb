@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { getSession, clearSession } from "@/lib/auth";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { MessageList } from "@/components/chat/MessageList";
 import { ChatInput } from "@/components/chat/ChatInput";
 import type { Message, Conversation } from "@/lib/types";
@@ -168,7 +169,7 @@ export default function ChatPage() {
   function logout() { clearSession(); router.push("/"); }
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#0d1117", color: "#e2e8f0", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ display: "flex", height: "100vh", background: "var(--bg)", color: "var(--text)" }}>
       <ChatSidebar
         conversations={conversations}
         activeId={activeId}
@@ -181,21 +182,20 @@ export default function ChatPage() {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Topbar */}
-        <div style={{ padding: "10px 20px", borderBottom: "1px solid #1a2f50", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0d1117", flexShrink: 0 }}>
+        <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, color: "#475569", fontWeight: 500 }}>模型</span>
-            <span style={{ fontSize: 13, color: "#7c3aed", fontWeight: 600, padding: "2px 8px", background: "rgba(124,58,237,0.1)", borderRadius: 6, border: "1px solid rgba(124,58,237,0.2)" }}>gemini-2.0-flash</span>
-            {isDemo.current && <span style={{ fontSize: 11, color: "#0fc6c2", padding: "2px 8px", background: "rgba(15,198,194,0.08)", borderRadius: 6, border: "1px solid rgba(15,198,194,0.2)", fontWeight: 600 }}>DEMO</span>}
+            <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 500 }}>模型</span>
+            <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600, padding: "2px 8px", background: "var(--accent-soft)", borderRadius: 6, border: "1px solid var(--accent-border)" }}>gemini-2.0-flash</span>
+            {isDemo.current && <span style={{ fontSize: 11, color: "var(--info)", padding: "2px 8px", background: "transparent", borderRadius: 6, border: "1px solid var(--info)", fontWeight: 600 }}>DEMO</span>}
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => router.push("/graph")}
-              style={{ padding: "6px 14px", borderRadius: 8, background: "rgba(15,198,194,0.08)", color: "#2dd4bf", border: "1px solid rgba(15,198,194,0.2)", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={() => router.push("/graph")} className="btn-ghost" style={{ fontSize: 12 }}>
               知識圖譜
             </button>
-            <button onClick={() => router.push("/admin")}
-              style={{ padding: "6px 14px", borderRadius: 8, background: "rgba(124,58,237,0.08)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.2)", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>
+            <button onClick={() => router.push("/admin")} className="btn-ghost" style={{ fontSize: 12 }}>
               管理後台
             </button>
+            <ThemeToggle />
           </div>
         </div>
 

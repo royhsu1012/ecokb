@@ -43,27 +43,37 @@ ecokb/
 └── docs/decisions/        # ADR 架構決策文件
 ```
 
-## 設計系統
+## 設計系統（Claude 風格日夜雙主題）
 
-### 色彩（CSS 變數定義於 globals.css）
-| 變數 | 值 | 用途 |
-|------|----|------|
-| `--bg` | `#0d1117` | 頁面底色 |
-| `--sidebar` | `#0d1f3c` | 側邊欄 / topbar |
-| `--card` | `#111827` | 訊息泡泡底色 |
-| `--primary` | `#7c3aed` | 主色（紫）|
-| `--secondary` | `#2d7dd2` | 次色（藍）|
-| `--accent` | `#0fc6c2` | 強調色（青）|
-| `--border` | `#1e3a5f` | 邊框 |
-| `--text` | `#e2e8f0` | 主文字 |
-| `--muted` | `#94a3b8` | 次要文字 |
+### 主題機制
+- 夜間為預設（`:root`），日間由 `html[data-theme="light"]` 覆蓋，變數定義於 `globals.css`
+- 切換元件：`components/ThemeToggle.tsx`，寫入 `localStorage.theme` 並設定 `data-theme`
+- `layout.tsx` 內嵌 init script 在 hydration 前套用主題（防 FOUC）
+- **規則：元件內一律使用 `var(--*)` 語意變數，禁止 hardcode 色碼**（分類色如檔案類型/狀態色除外）
+
+### 語意色彩變數（globals.css）
+| 變數 | 夜間 | 日間 | 用途 |
+|------|------|------|------|
+| `--bg` | `#262624` | `#faf9f5` | 頁面底色 |
+| `--surface` | `#1f1e1d` | `#f0eee6` | 側邊欄 / topbar |
+| `--card` | `#30302e` | `#ffffff` | 卡片 / 泡泡 / 輸入框 |
+| `--text` | `#f5f4ee` | `#3d3929` | 主文字 |
+| `--text-2` / `--muted` / `--faint` | 漸弱 | 漸弱 | 次要／弱化／最弱文字 |
+| `--border` / `--border-strong` | `#3a3937` | `#e3e0d5` | 邊框 |
+| `--accent` | `#d97757` | `#c96442` | 主色（赤陶橘）|
+| `--accent-soft` / `--accent-border` | 透明橘 | 透明橘 | 主色底 / 主色框 |
+| `--danger` / `--success` / `--info` | — | — | 狀態色 |
+| `--shadow` / `--shadow-sm` | — | — | 陰影 |
 
 ### 共用 CSS 類別（globals.css）
-- `.btn-ghost` — 灰色邊框按鈕，hover 變紫
+- `.btn-ghost` — 邊框按鈕，hover 變主色
+- `.btn-primary` — 主色實心按鈕（含 disabled 樣式）
 - `.del-btn` — 刪除按鈕，hover 變紅
 - `.suggestion-chip` — 空狀態建議晶片
+- `.conv-item` / `.conv-item.active` — 側欄對話項目
+- `.theme-toggle` — 日夜切換按鈕
 - `.pulse` — 1.5s 透明度閃爍動畫
-- `.auth-input` — 登入頁輸入框，`:focus` 變紫色邊框
+- `.auth-input` — 輸入框，`:focus` 變主色邊框
 
 ## 編碼規範
 

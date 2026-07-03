@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { Document } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -104,34 +105,35 @@ export default function AdminPage() {
   const errorDocs = docs.filter(d => d.status === "error");
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0d1117", color: "#e2e8f0" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
       {/* Topbar */}
-      <div style={{ padding: "12px 24px", borderBottom: "1px solid #1a2f50", display: "flex", alignItems: "center", gap: 12, background: "#0a1628", position: "sticky", top: 0, zIndex: 10 }}>
+      <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, background: "var(--surface)", position: "sticky", top: 0, zIndex: 10 }}>
         <button onClick={() => router.push("/chat")}
-          style={{ color: "#475569", background: "rgba(255,255,255,0.04)", border: "1px solid #1e3a5f", borderRadius: 8, cursor: "pointer", fontSize: 13, padding: "6px 12px" }}>← 返回對話</button>
-        <div style={{ width: 1, height: 20, background: "#1e3a5f" }} />
+          className="btn-ghost">← 返回對話</button>
+        <div style={{ width: 1, height: 20, background: "var(--border)" }} />
         <Logo size={26} showText={false} />
         <span style={{ fontWeight: 700, fontSize: 14 }}>管理後台</span>
-        {isDemo.current && <span style={{ fontSize: 11, color: "#0fc6c2", padding: "2px 8px", background: "rgba(15,198,194,0.08)", borderRadius: 6, border: "1px solid rgba(15,198,194,0.2)", fontWeight: 600 }}>DEMO</span>}
-        <div style={{ marginLeft: "auto", display: "flex", gap: 16, fontSize: 12, color: "#475569" }}>
+        {isDemo.current && <span style={{ fontSize: 11, color: "var(--info)", padding: "2px 8px", background: "transparent", borderRadius: 6, border: "1px solid var(--info)", fontWeight: 600 }}>DEMO</span>}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 16, fontSize: 12, color: "var(--muted)", alignItems: "center" }}>
           <span>{docs.length} 份文件</span>
-          <span style={{ color: "#10b981" }}>{readyDocs.length} 完成</span>
-          {processingDocs.length > 0 && <span style={{ color: "#3b82f6" }}>{processingDocs.length} 處理中</span>}
-          {errorDocs.length > 0 && <span style={{ color: "#ef4444" }}>{errorDocs.length} 錯誤</span>}
+          <span style={{ color: "var(--success)" }}>{readyDocs.length} 完成</span>
+          {processingDocs.length > 0 && <span style={{ color: "var(--info)" }}>{processingDocs.length} 處理中</span>}
+          {errorDocs.length > 0 && <span style={{ color: "var(--danger)" }}>{errorDocs.length} 錯誤</span>}
+          <ThemeToggle />
         </div>
       </div>
 
       <div style={{ maxWidth: 920, margin: "0 auto", padding: "32px 24px" }}>
 
         {/* Upload card */}
-        <div style={{ background: "#0d1f3c", border: "1px solid #1e3a5f", borderRadius: 14, padding: 24, marginBottom: 24 }}>
-          <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 18, color: "#e2e8f0" }}>新增知識來源</h3>
+        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 24, marginBottom: 24 }}>
+          <h3 style={{ fontWeight: 700, fontSize: 15, marginBottom: 18, color: "var(--text)" }}>新增知識來源</h3>
 
           {/* Tabs */}
-          <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#0d1117", borderRadius: 10, padding: 4, width: "fit-content" }}>
+          <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "var(--bg)", borderRadius: 10, padding: 4, width: "fit-content" }}>
             {(["upload", "manual"] as const).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                style={{ padding: "7px 18px", borderRadius: 7, cursor: "pointer", fontSize: 13, fontWeight: 500, border: "none", background: tab === t ? "#1e3a5f" : "transparent", color: tab === t ? "#e2e8f0" : "#475569", transition: "all 0.15s" }}>
+                style={{ padding: "7px 18px", borderRadius: 7, cursor: "pointer", fontSize: 13, fontWeight: 500, border: "none", background: tab === t ? "var(--card)" : "transparent", color: tab === t ? "var(--text)" : "var(--muted)", transition: "all 0.15s" }}>
                 {t === "upload" ? "檔案上傳" : "手動輸入"}
               </button>
             ))}
@@ -145,13 +147,13 @@ export default function AdminPage() {
                 onDrop={e => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files); }}
                 onClick={() => fileInputRef.current?.click()}
                 style={{
-                  border: `2px dashed ${dragOver ? "#7c3aed" : "#1e3a5f"}`, borderRadius: 12,
+                  border: `2px dashed ${dragOver ? "var(--accent)" : "var(--border)"}`, borderRadius: 12,
                   padding: "52px 24px", textAlign: "center", cursor: "pointer",
-                  background: dragOver ? "rgba(124,58,237,0.06)" : "rgba(13,17,23,0.5)", transition: "all 0.2s",
+                  background: dragOver ? "var(--accent-soft)" : "var(--bg)", transition: "all 0.2s",
                 }}>
                 <div style={{ fontSize: 36, marginBottom: 10 }}>📁</div>
-                <p style={{ color: "#94a3b8", fontSize: 14, fontWeight: 500, marginBottom: 4 }}>拖曳檔案至此，或點擊選擇</p>
-                <p style={{ color: "#374151", fontSize: 12 }}>支援 PDF · DOCX · TXT · CSV · XLSX · JPG · PNG（最大 50MB）</p>
+                <p style={{ color: "var(--text-2)", fontSize: 14, fontWeight: 500, marginBottom: 4 }}>拖曳檔案至此，或點擊選擇</p>
+                <p style={{ color: "var(--faint)", fontSize: 12 }}>支援 PDF · DOCX · TXT · CSV · XLSX · JPG · PNG（最大 50MB）</p>
               </div>
               <input ref={fileInputRef} type="file" multiple hidden
                 accept=".pdf,.docx,.txt,.csv,.xlsx,.jpg,.jpeg,.png"
@@ -159,7 +161,7 @@ export default function AdminPage() {
               {uploadProgress.length > 0 && (
                 <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 6 }}>
                   {uploadProgress.map((p, i) => (
-                    <div key={i} style={{ fontSize: 12, color: p.startsWith("失敗") ? "#f87171" : p.startsWith("完成") ? "#34d399" : "#60a5fa", padding: "6px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 6 }}>
+                    <div key={i} style={{ fontSize: 12, color: p.startsWith("失敗") ? "var(--danger)" : p.startsWith("完成") ? "var(--success)" : "var(--info)", padding: "6px 12px", background: "var(--bg)", borderRadius: 6 }}>
                       {p.startsWith("上傳中") ? "⏳" : p.startsWith("完成") ? "✓" : "✗"} {p}
                     </div>
                   ))}
@@ -169,11 +171,11 @@ export default function AdminPage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <input placeholder="文件標題（選填）" value={manualTitle} onChange={e => setManualTitle(e.target.value)}
-                style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #1e3a5f", background: "#0d1117", color: "#e2e8f0", outline: "none", fontSize: 14 }} />
+                className="auth-input" />
               <textarea placeholder="貼上或輸入文字內容…" value={manualText} onChange={e => setManualText(e.target.value)} rows={8}
-                style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #1e3a5f", background: "#0d1117", color: "#e2e8f0", outline: "none", fontSize: 14, resize: "vertical", lineHeight: 1.6 }} />
+                className="auth-input" style={{ resize: "vertical", lineHeight: 1.6 }} />
               <button onClick={submitManual} disabled={uploading || !manualText.trim()}
-                style={{ alignSelf: "flex-start", padding: "10px 24px", borderRadius: 8, background: manualText.trim() ? "linear-gradient(135deg,#7c3aed,#2d7dd2)" : "#1e3a5f", color: manualText.trim() ? "white" : "#374151", border: "none", cursor: manualText.trim() ? "pointer" : "not-allowed", fontWeight: 600, fontSize: 14, transition: "all 0.2s" }}>
+                className="btn-primary" style={{ alignSelf: "flex-start", padding: "10px 24px", fontSize: 14 }}>
                 {uploading ? "處理中…" : "新增到知識庫"}
               </button>
             </div>
@@ -181,17 +183,17 @@ export default function AdminPage() {
         </div>
 
         {/* Document list */}
-        <div style={{ background: "#0d1f3c", border: "1px solid #1e3a5f", borderRadius: 14, padding: 24 }}>
+        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-            <h3 style={{ fontWeight: 700, fontSize: 15, color: "#e2e8f0" }}>知識庫文件</h3>
+            <h3 style={{ fontWeight: 700, fontSize: 15, color: "var(--text)" }}>知識庫文件</h3>
             <button onClick={() => kbId && !isDemo.current && loadDocs(kbId)}
-              style={{ color: "#475569", background: "rgba(255,255,255,0.04)", border: "1px solid #1e3a5f", borderRadius: 7, cursor: "pointer", fontSize: 12, padding: "5px 12px" }}>
+              className="btn-ghost" style={{ fontSize: 12, padding: "5px 12px" }}>
               重新整理
             </button>
           </div>
 
           {docs.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "48px 0", color: "#374151" }}>
+            <div style={{ textAlign: "center", padding: "48px 0", color: "var(--faint)" }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>📂</div>
               <p style={{ fontSize: 14 }}>尚未上傳任何文件</p>
               <p style={{ fontSize: 12, marginTop: 4 }}>上傳後即可在對話頁提問</p>
@@ -199,18 +201,17 @@ export default function AdminPage() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {docs.map(doc => (
-                <div key={doc.id}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "#0d1117", borderRadius: 10, border: "1px solid #1a2f50", transition: "border-color 0.15s" }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = "#1e3a5f")}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = "#1a2f50")}>
+                <div key={doc.id} className="doc-row"
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "var(--bg)", borderRadius: 10, border: "1px solid var(--border)" }}
+                  >
                   {/* File type icon */}
                   <div style={{ width: 36, height: 36, borderRadius: 8, background: `${TYPE_COLORS[doc.file_type] || "#64748b"}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0, border: `1px solid ${TYPE_COLORS[doc.file_type] || "#64748b"}33` }}>
                     {TYPE_ICONS[doc.file_type] || "📄"}
                   </div>
                   {/* File info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#d1d5db" }}>{doc.filename}</div>
-                    <div style={{ fontSize: 11, color: "#374151", marginTop: 2 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text)" }}>{doc.filename}</div>
+                    <div style={{ fontSize: 11, color: "var(--faint)", marginTop: 2 }}>
                       <span style={{ color: TYPE_COLORS[doc.file_type] || "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{doc.file_type}</span>
                       {doc.chunk_count > 0 && <span> · {doc.chunk_count} 個段落</span>}
                     </div>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,11 +43,18 @@ export default function LoginPage() {
     }
   }
 
+  const labelStyle: React.CSSProperties = { display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" };
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0d1117", position: "relative", overflow: "hidden" }}>
-      {/* Glow */}
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", position: "relative", overflow: "hidden" }}>
+      {/* 右上角主題切換 */}
+      <div style={{ position: "absolute", top: 20, right: 20, zIndex: 20 }}>
+        <ThemeToggle />
+      </div>
+
+      {/* 柔光背景 */}
       <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-        <div style={{ width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)" }} />
+        <div style={{ width: 440, height: 440, borderRadius: "50%", background: "radial-gradient(circle, var(--accent-soft) 0%, transparent 70%)" }} />
       </div>
 
       <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 420, padding: "0 1rem" }}>
@@ -55,57 +63,57 @@ export default function LoginPage() {
           <div style={{ display: "inline-flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
             <Logo size={36} fontSize={26} />
           </div>
-          <p style={{ color: "#64748b", fontSize: 13 }}>經濟學知識庫 · RAG 問答平台</p>
+          <p style={{ color: "var(--muted)", fontSize: 13 }}>經濟學知識庫 · RAG 問答平台</p>
         </div>
 
         {/* Card */}
-        <div style={{ background: "#0d1f3c", border: "1px solid #1e3a5f", borderRadius: 16, padding: 32, boxShadow: "0 20px 60px rgba(0,0,0,0.4)" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0", marginBottom: 24 }}>
+        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 16, padding: 32, boxShadow: "var(--shadow)" }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 24 }}>
             {isRegister ? "建立帳號" : "歡迎回來"}
           </h2>
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>電子郵件</label>
+              <label style={labelStyle}>電子郵件</label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 className="auth-input"
                 placeholder="you@example.com" />
             </div>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>密碼</label>
+              <label style={labelStyle}>密碼</label>
               <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
                 className="auth-input"
                 placeholder="••••••••" />
             </div>
             {isRegister && (
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#64748b", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>管理員金鑰 <span style={{ fontWeight: 400, textTransform: "none" }}>(選填)</span></label>
+                <label style={labelStyle}>管理員金鑰 <span style={{ fontWeight: 400, textTransform: "none" }}>(選填)</span></label>
                 <input type="password" value={adminKey} onChange={e => setAdminKey(e.target.value)}
                   className="auth-input"
                   placeholder="管理員專用金鑰" />
               </div>
             )}
             {error && (
-              <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13 }}>
+              <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--danger-soft)", border: "1px solid var(--danger)", color: "var(--danger)", fontSize: 13 }}>
                 {error}
               </div>
             )}
-            <button type="submit" disabled={loading}
-              style={{ padding: "11px", borderRadius: 8, background: "linear-gradient(135deg,#7c3aed,#2d7dd2)", color: "white", fontWeight: 600, border: "none", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, fontSize: 14, marginTop: 4, boxShadow: "0 4px 14px rgba(124,58,237,0.3)", transition: "opacity 0.2s" }}>
+            <button type="submit" disabled={loading} className="btn-primary"
+              style={{ padding: "11px", fontSize: 14, marginTop: 4 }}>
               {loading ? "處理中…" : isRegister ? "建立帳號" : "登入"}
             </button>
           </form>
 
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #1e3a5f" }}>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
             <button onClick={enterDemo}
-              style={{ width: "100%", padding: "10px", borderRadius: 8, background: "rgba(15,198,194,0.08)", color: "#0fc6c2", border: "1px solid rgba(15,198,194,0.25)", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>
+              style={{ width: "100%", padding: "10px", borderRadius: 8, background: "var(--accent-soft)", color: "var(--accent)", border: "1px solid var(--accent-border)", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>
               Demo 模式（無需帳號）
             </button>
           </div>
 
-          <p style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "#64748b" }}>
+          <p style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "var(--muted)" }}>
             {isRegister ? "已有帳號？" : "還沒有帳號？"}
             <button onClick={() => { setIsRegister(!isRegister); setError(""); }}
-              style={{ marginLeft: 4, color: "#a78bfa", background: "none", border: "none", cursor: "pointer" }}>
+              style={{ marginLeft: 4, color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}>
               {isRegister ? "登入" : "免費註冊"}
             </button>
           </p>

@@ -9,7 +9,7 @@ function renderContent(text: string) {
   return parts.map((part, i) => {
     if (/^\[來源 \d+\]$/.test(part)) {
       return (
-        <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", borderRadius: 4, background: "rgba(45,125,210,0.15)", color: "#60a5fa", fontSize: 11, fontWeight: 600, margin: "0 2px", border: "1px solid rgba(45,125,210,0.3)", verticalAlign: "middle" }}>
+        <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", borderRadius: 4, background: "var(--accent-soft)", color: "var(--accent)", fontSize: 11, fontWeight: 600, margin: "0 2px", border: "1px solid var(--accent-border)", verticalAlign: "middle" }}>
           {part}
         </span>
       );
@@ -18,7 +18,7 @@ function renderContent(text: string) {
     return (
       <span key={i}>
         {boldParts.map((bp, j) =>
-          j % 2 === 1 ? <strong key={j} style={{ color: "#e2e8f0", fontWeight: 600 }}>{bp}</strong> : bp
+          j % 2 === 1 ? <strong key={j} style={{ color: "var(--text)", fontWeight: 600 }}>{bp}</strong> : bp
         )}
       </span>
     );
@@ -38,9 +38,9 @@ export function MessageList({ conversation, thinking, onSuggestion, endRef }: Pr
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 24px", display: "flex", flexDirection: "column", gap: 24 }}>
         {!conversation || conversation.messages.length === 0 ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, paddingTop: 80 }}>
-            <div style={{ width: 72, height: 72, borderRadius: 20, background: "linear-gradient(135deg,#7c3aed22,#2d7dd222)", border: "1px solid #1e3a5f", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>📚</div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: "#e2e8f0", margin: 0 }}>EconKB 知識庫助理</h2>
-            <p style={{ color: "#475569", fontSize: 14, margin: 0, textAlign: "center", lineHeight: 1.6 }}>上傳文件後開始提問<br />AI 將根據你的知識庫內容回答並標註來源</p>
+            <div style={{ width: 72, height: 72, borderRadius: 20, background: "var(--accent-soft)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>📚</div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", margin: 0 }}>EconKB 知識庫助理</h2>
+            <p style={{ color: "var(--muted)", fontSize: 14, margin: 0, textAlign: "center", lineHeight: 1.6 }}>上傳文件後開始提問<br />AI 將根據你的知識庫內容回答並標註來源</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
               {SUGGESTIONS.map(q => (
                 <button key={q} className="suggestion-chip" onClick={() => onSuggestion(q)}>
@@ -54,23 +54,23 @@ export function MessageList({ conversation, thinking, onSuggestion, endRef }: Pr
             <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start", gap: 4 }}>
               {msg.role === "assistant" && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: 6, background: "linear-gradient(135deg,#7c3aed,#2d7dd2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "white" }}>E</div>
-                  <span style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>EconKB</span>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "var(--on-accent)" }}>E</div>
+                  <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>EconKB</span>
                 </div>
               )}
               <div style={{
                 maxWidth: "84%", padding: "12px 16px", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
                 fontSize: 14, lineHeight: 1.75,
-                background: msg.role === "user" ? "linear-gradient(135deg,#7c3aed,#2d7dd2)" : "#111827",
-                color: "#e2e8f0",
-                border: msg.role === "assistant" ? "1px solid #1e3a5f" : "none",
-                boxShadow: msg.role === "user" ? "0 2px 8px rgba(124,58,237,0.3)" : "none",
+                background: msg.role === "user" ? "var(--accent)" : "var(--card)",
+                color: msg.role === "user" ? "var(--on-accent)" : "var(--text)",
+                border: msg.role === "assistant" ? "1px solid var(--border)" : "none",
+                boxShadow: "var(--shadow-sm)",
                 whiteSpace: "pre-wrap",
               }}>
                 {msg.content === "" && thinking && i === conversation.messages.length - 1 ? (
                   <span style={{ display: "flex", gap: 5, alignItems: "center", padding: "2px 0" }}>
                     {[0, 1, 2].map(d => (
-                      <span key={d} className="typing-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c3aed", display: "inline-block" }} />
+                      <span key={d} className="typing-dot" style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
                     ))}
                   </span>
                 ) : (
@@ -79,7 +79,7 @@ export function MessageList({ conversation, thinking, onSuggestion, endRef }: Pr
               </div>
               {msg.role === "assistant" && msg.content && (
                 <button onClick={() => navigator.clipboard.writeText(msg.content)}
-                  style={{ fontSize: 11, color: "#374151", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", marginTop: 2 }}
+                  style={{ fontSize: 11, color: "var(--faint)", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", marginTop: 2 }}
                   title="複製">
                   複製
                 </button>

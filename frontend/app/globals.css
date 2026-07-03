@@ -2,16 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   主題系統 — Claude 風格
+   夜間（預設）：暖炭黑底 + 奶油字 + 赤陶橘主色
+   日間：奶油白底 + 深墨字 + 赤陶橘主色
+   切換：html[data-theme="light"]，由 ThemeToggle 寫入
+   ============================================================ */
+
 :root {
-  --bg: #0d1117;
-  --sidebar: #0d1f3c;
-  --primary: #7c3aed;
-  --secondary: #2d7dd2;
-  --accent: #0fc6c2;
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-  --border: #1e3a5f;
-  --card: #111827;
+  --bg: #262624;            /* 頁面底色 */
+  --surface: #1f1e1d;       /* 側邊欄 / topbar */
+  --card: #30302e;          /* 卡片 / 訊息泡泡 / 輸入框 */
+  --card-hover: #383836;
+  --text: #f5f4ee;          /* 主文字 */
+  --text-2: #c2c0b6;        /* 次要文字 */
+  --muted: #83827d;         /* 弱化文字 */
+  --faint: #62615c;         /* 最弱文字 / placeholder */
+  --border: #3a3937;        /* 邊框 */
+  --border-strong: #4c4a46;
+  --accent: #d97757;        /* 主色：赤陶橘 */
+  --accent-strong: #c96442;
+  --accent-soft: rgba(217, 119, 87, 0.12);
+  --accent-border: rgba(217, 119, 87, 0.35);
+  --on-accent: #ffffff;
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, 0.12);
+  --success: #2eb88a;
+  --info: #5b9dd9;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+html[data-theme="light"] {
+  --bg: #faf9f5;
+  --surface: #f0eee6;
+  --card: #ffffff;
+  --card-hover: #f5f4ef;
+  --text: #3d3929;
+  --text-2: #5e5a4e;
+  --muted: #83827d;
+  --faint: #b0aea5;
+  --border: #e3e0d5;
+  --border-strong: #d1cec2;
+  --accent: #c96442;
+  --accent-strong: #b55535;
+  --accent-soft: rgba(201, 100, 66, 0.09);
+  --accent-border: rgba(201, 100, 66, 0.3);
+  --on-accent: #ffffff;
+  --danger: #d13438;
+  --danger-soft: rgba(209, 52, 56, 0.08);
+  --success: #1e9e6f;
+  --info: #3b82c4;
+  --shadow: 0 4px 24px rgba(61, 57, 41, 0.08);
+  --shadow-sm: 0 1px 4px rgba(61, 57, 41, 0.06);
 }
 
 * { box-sizing: border-box; }
@@ -19,14 +62,13 @@
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+  transition: background 0.25s, color 0.25s;
 }
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-.glow-purple { box-shadow: 0 0 60px 20px rgba(124, 58, 237, 0.15); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 
 /* Pulse animation for processing status indicators */
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -34,20 +76,33 @@ body {
 
 /* Ghost button — neutral bordered, highlights on hover */
 .btn-ghost {
-  background: rgba(255,255,255,0.04);
+  background: transparent;
   border: 1px solid var(--border);
   color: var(--muted);
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   padding: 6px 12px;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.btn-ghost:hover { border-color: var(--primary); color: #a78bfa; }
+.btn-ghost:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-soft); }
 
-/* Delete button — hidden until hover */
+/* Primary button */
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s, opacity 0.15s;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-strong); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Delete button — subtle until hover */
 .del-btn {
-  color: #374151;
+  color: var(--faint);
   background: none;
   border: none;
   cursor: pointer;
@@ -57,24 +112,24 @@ body {
   border-radius: 6px;
   transition: color 0.15s;
 }
-.del-btn:hover { color: #ef4444; }
+.del-btn:hover { color: var(--danger); }
 
 /* Document row hover border brightening */
-.doc-row { transition: border-color 0.15s; }
-.doc-row:hover { border-color: var(--border) !important; }
+.doc-row { transition: border-color 0.15s, background 0.15s; }
+.doc-row:hover { border-color: var(--border-strong) !important; background: var(--card-hover) !important; }
 
 /* Suggestion chips on empty chat state */
 .suggestion-chip {
   padding: 8px 14px;
   border-radius: 20px;
   background: transparent;
-  color: #64748b;
+  color: var(--muted);
   border: 1px solid var(--border);
   cursor: pointer;
   font-size: 13px;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.suggestion-chip:hover { border-color: var(--primary); color: #a78bfa; }
+.suggestion-chip:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-soft); }
 
 /* Auth form inputs */
 .auth-input {
@@ -88,7 +143,42 @@ body {
   font-size: 14px;
   transition: border-color 0.2s;
 }
-.auth-input:focus { border-color: var(--primary); }
+.auth-input::placeholder { color: var(--faint); }
+.auth-input:focus { border-color: var(--accent); }
+
+/* Theme toggle button */
+.theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--accent-border); color: var(--accent); background: var(--accent-soft); }
+
+/* Conversation list item */
+.conv-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+}
+.conv-item:hover { background: var(--card-hover); }
+.conv-item.active { background: var(--accent-soft); color: var(--accent); }
 
 .typing-dot { animation: typing 1.2s infinite; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
@@ -98,4 +188,3 @@ body {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-6px); opacity: 1; }
 }
-

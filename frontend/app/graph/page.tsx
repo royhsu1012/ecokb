@@ -4,12 +4,13 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type NodeType = "document" | "keyword" | "topic";
 interface GraphNode { id: string; label: string; type: NodeType; meta: Record<string, string>; x?: number; y?: number; vx?: number; vy?: number; }
 interface GraphLink { source: string | GraphNode; target: string | GraphNode; }
 
-const NODE_COLORS: Record<NodeType, string> = { document: "#7c3aed", topic: "#0fc6c2", keyword: "#f97316" };
+const NODE_COLORS: Record<NodeType, string> = { document: "#d97757", topic: "#2eb88a", keyword: "#5b9dd9" };
 
 export default function GraphPage() {
   const router = useRouter();
@@ -69,7 +70,7 @@ export default function GraphPage() {
 
       const link = g.append("g").selectAll("line")
         .data(filteredLinks).join("line")
-        .attr("stroke", "#1e3a5f").attr("stroke-width", 1.5);
+        .style("stroke", "var(--border-strong)").attr("stroke-width", 1.5);
 
       const node = (g.append("g").selectAll("g")
         .data(filtered).join("g") as d3.Selection<SVGGElement, any, SVGGElement, unknown>)
@@ -89,7 +90,7 @@ export default function GraphPage() {
       node.append("text")
         .attr("dy", d => d.type === "document" ? 32 : 22)
         .attr("text-anchor", "middle")
-        .attr("fill", "#e2e8f0")
+        .style("fill", "var(--text)")
         .attr("font-size", d => d.type === "document" ? 11 : 9)
         .text(d => (d as GraphNode).label.slice(0, 12));
 
@@ -102,31 +103,32 @@ export default function GraphPage() {
   }, [nodes, links, filter]);
 
   const filterBtns: Array<["all" | NodeType, string, string]> = [
-    ["all", "全部", "#e2e8f0"], ["document", "文件", NODE_COLORS.document],
+    ["all", "全部", "var(--text)"], ["document", "文件", NODE_COLORS.document],
     ["topic", "主題", NODE_COLORS.topic], ["keyword", "關鍵詞", NODE_COLORS.keyword],
   ];
 
   return (
-    <div style={{ height: "100vh", background: "#0d1117", color: "#e2e8f0", display: "flex", flexDirection: "column" }}>
+    <div style={{ height: "100vh", background: "var(--bg)", color: "var(--text)", display: "flex", flexDirection: "column" }}>
       {/* Topbar */}
-      <div style={{ padding: "12px 20px", borderBottom: "1px solid #1e3a5f", display: "flex", alignItems: "center", gap: 12, background: "#0d1f3c" }}>
+      <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, background: "var(--surface)" }}>
         <button onClick={() => router.push("/chat")} className="btn-ghost" style={{ fontSize: 13, padding: "5px 10px" }}>← 返回對話</button>
         <Logo size={24} showText={false} />
         <span style={{ fontWeight: 700, fontSize: 14 }}>知識圖譜</span>
         <div style={{ display: "flex", gap: 6, marginLeft: 16 }}>
           {filterBtns.map(([val, label, color]) => (
             <button key={val} onClick={() => setFilter(val)}
-              style={{ padding: "4px 12px", borderRadius: 20, fontSize: 12, border: `1px solid ${filter === val ? color : "#1e3a5f"}`, background: filter === val ? color + "22" : "transparent", color: filter === val ? color : "#94a3b8", cursor: "pointer" }}>
+              style={{ padding: "4px 12px", borderRadius: 20, fontSize: 12, border: `1px solid ${filter === val ? color : "var(--border)"}`, background: filter === val ? color + "22" : "transparent", color: filter === val ? color : "var(--muted)", cursor: "pointer" }}>
               {label}
             </button>
           ))}
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 12, fontSize: 12, color: "#64748b" }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 12, fontSize: 12, color: "var(--muted)", alignItems: "center" }}>
           {filterBtns.slice(1).map(([, label, color]) => (
             <span key={label} style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block" }} />{label}
             </span>
           ))}
+          <ThemeToggle />
         </div>
       </div>
 
@@ -134,9 +136,9 @@ export default function GraphPage() {
         {/* SVG graph */}
         <div style={{ flex: 1, position: "relative" }}>
           {loading ? (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>載入中…</div>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>載入中…</div>
           ) : nodes.length === 0 ? (
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "#94a3b8" }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: "var(--muted)" }}>
               <div style={{ fontSize: 48 }}>🕸️</div>
               <p>知識庫尚無資料，請先至管理後台上傳文件。</p>
             </div>
@@ -147,19 +149,19 @@ export default function GraphPage() {
 
         {/* Detail panel */}
         {selected && (
-          <div style={{ width: 280, borderLeft: "1px solid #1e3a5f", padding: 20, background: "#0d1f3c", overflowY: "auto" }}>
+          <div style={{ width: 280, borderLeft: "1px solid var(--border)", padding: 20, background: "var(--surface)", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <h3 style={{ fontWeight: 600, fontSize: 15, wordBreak: "break-all" }}>{selected.label}</h3>
-              <button onClick={() => setSelected(null)} style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 18 }}>×</button>
+              <button onClick={() => setSelected(null)} className="del-btn">×</button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#94a3b8", fontSize: 13 }}>類型</span>
+                <span style={{ color: "var(--muted)", fontSize: 13 }}>類型</span>
                 <span style={{ fontSize: 13, color: NODE_COLORS[selected.type] }}>{selected.type === "document" ? "文件" : selected.type === "topic" ? "主題" : "關鍵詞"}</span>
               </div>
               {Object.entries(selected.meta).map(([k, v]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#94a3b8", fontSize: 13 }}>{k}</span>
+                  <span style={{ color: "var(--muted)", fontSize: 13 }}>{k}</span>
                   <span style={{ fontSize: 13, wordBreak: "break-all", maxWidth: 160, textAlign: "right" }}>{v}</span>
                 </div>
               ))}

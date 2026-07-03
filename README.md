@@ -222,10 +222,46 @@ Supabase 全表啟用 Row Level Security 作為資料層防線；後端另以 `r
 
 ## 治理框架
 
-- **分層規範**：`routers/`（HTTP）· `services/`（業務）· `schemas.py`（請求模型）· `dependencies.py`（認證/授權），規則寫入 [CLAUDE.md](CLAUDE.md)
-- **測試**：pytest 覆蓋認證、授權、輸入驗證（TestClient + dependency override，免真實 DB）
-- **依賴掃描**：[Dependabot](.github/dependabot.yml) 週更 npm / pip、月更 GitHub Actions
-- **決策留痕**：所有重大設計以 ADR 記錄於 `docs/decisions/`
+專案以四道機制維持長期可維護性——分層規範、品質閘、依賴治理、決策留痕。
+
+### 分層與編碼規範
+
+後端嚴格分層，每層單一職責，規則明文寫入 [CLAUDE.md](CLAUDE.md) 供人與 AI 共同遵循：
+
+| 層 | 職責 | 硬性規則 |
+|----|------|----------|
+| `routers/` | HTTP 流程（驗證、參數、回應）| 不自帶 Pydantic schema |
+| `services/` | 業務邏輯（LLM、embedding、儲存、解析、RAG）| Gemini 設定只在 `gemini.py` |
+| `schemas.py` | 請求模型集中管理 | — |
+| `dependencies.py` | 認證與授權 | `user_id` 一律取自 JWT，KB 存取走 `require_kb_ownership` |
+
+前端對應規範：元件一律用 `var(--*)` 語意變數（禁 hardcode 色碼）、401 統一走 `handleUnauthorized()`、型別用 `lib/types.ts`（禁 `any[]`）。
+
+### 品質閘（每次變更前）
+
+| 閘 | 指令 | 把關 |
+|----|------|------|
+| 型別 | `cd frontend && npx tsc --noEmit` | 前端型別錯誤 |
+| Build | `npm run build` | 靜態匯出可建置 |
+| 測試 | `cd backend && pytest tests/ -q` | 認證 / 授權 / 輸入驗證 |
+
+測試以 `TestClient` + FastAPI `dependency_overrides` 抽換 Supabase 與認證，**免真實 DB / 網路**即可跑，涵蓋：未帶 token 一律 401/403、跨使用者 KB 拒絕、50MB 上限、email 格式驗證等安全不變式。
+
+### 依賴治理
+
+[Dependabot](.github/dependabot.yml) 自動掃描與開 PR：
+
+| 生態 | 目錄 | 頻率 | PR 上限 |
+|------|------|------|---------|
+| npm | `/frontend` | 每週一 | 5 |
+| pip | `/backend` | 每週一 | 5 |
+| github-actions | `/` | 每月 | — |
+
+上線期間實際靠此機制的思路解過多起相依衝突（如 `supabase 2.31.0` ↔ `pydantic` 版本、`realtime` 相依）。
+
+### 架構決策留痕
+
+所有重大設計與取捨以 ADR 記錄於 [`docs/decisions/`](docs/decisions/)（目前 6 篇），含背景、決策、後果、升級路徑；棄用決策保留並標註被取代者（如 ADR-004 → ADR-005），確保 AI 接手時不會走回頭路。
 
 ---
 

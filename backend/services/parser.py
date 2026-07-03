@@ -9,12 +9,13 @@ import pandas as pd
 
 from services.ocr import ocr_pdf_page
 
+# 非 ZIP 容器的明確 magic
 MAGIC_BYTES: dict[bytes, str] = {
     b"%PDF": "pdf",
-    b"PK\x03\x04": "docx",
     b"\xff\xd8\xff": "jpg",
     b"\x89PNG": "png",
 }
+ZIP_MAGIC = b"PK\x03\x04"  # docx / xlsx 共用，需靠副檔名/mime 進一步區分
 
 
 def detect_file_type(data: bytes, filename: str = "", mime: str = "") -> str:
@@ -22,6 +23,13 @@ def detect_file_type(data: bytes, filename: str = "", mime: str = "") -> str:
         if data[: len(magic)] == magic:
             return ext
     suffix = Path(filename).suffix.lower().lstrip(".")
+    # ZIP 容器（docx/xlsx）：優先用副檔名，其次 mime，預設 docx
+    if data[: len(ZIP_MAGIC)] == ZIP_MAGIC:
+        if suffix in ("xlsx", "docx"):
+            return suffix
+        if "spreadsheet" in mime or "excel" in mime:
+            return "xlsx"
+        return "docx"
     if suffix in ("pdf", "docx", "txt", "csv", "xlsx", "jpg", "jpeg", "png"):
         return "jpg" if suffix == "jpeg" else suffix
     if "pdf" in mime:

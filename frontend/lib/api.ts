@@ -1,4 +1,4 @@
-import type { Document, Message } from "./types";
+import type { Document, Message, GraphNode, GraphLink } from "./types";
 import { clearSession } from "./auth";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -128,6 +128,6 @@ export const api = {
     },
   },
   graph: {
-    get: (kb_id: string) => request<{ nodes: any[]; links: any[] }>(`/graph/${kb_id}`),
+    get: (kb_id: string) => request<{ nodes: GraphNode[]; links: GraphLink[] }>(`/graph/${kb_id}`),
   },
 };

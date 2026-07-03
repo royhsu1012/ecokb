@@ -5,6 +5,7 @@ export function saveSession(token: string, userId: string, email: string) {
 }
 
 export function clearSession() {
+  if (typeof window === "undefined") return;
   localStorage.removeItem("access_token");
   localStorage.removeItem("user_id");
   localStorage.removeItem("user_email");

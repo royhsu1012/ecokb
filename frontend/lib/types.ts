@@ -18,3 +18,17 @@ export interface Conversation {
   messages: Message[];
   loaded?: boolean; // server 對話的訊息是否已載入
 }
+
+export type GraphNodeType = "document" | "keyword" | "topic";
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: GraphNodeType;
+  meta: Record<string, string>;
+}
+
+export interface GraphLink {
+  source: string;
+  target: string;
+}

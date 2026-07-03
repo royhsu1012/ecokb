@@ -30,7 +30,7 @@ alter table documents enable row level security;
 create policy "Users manage own docs" on documents
   using (auth.uid() = user_id);
 
--- Chunks with vector embeddings (768 dims = Google text-embedding-004)
+-- Chunks with vector embeddings (768 dims = Google gemini-embedding-001, output_dimensionality=768)
 create table if not exists chunks (
   id uuid primary key default gen_random_uuid(),
   doc_id uuid references documents on delete cascade,

@@ -1,3 +1,5 @@
+import hmac
+
 from fastapi import APIRouter, HTTPException, Depends
 from supabase._async.client import AsyncClient
 
@@ -11,7 +13,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/register")
 async def register(req: RegisterRequest, sb: AsyncClient = Depends(get_supabase)):
     settings = get_settings()
-    is_admin = req.admin_key == settings.admin_secret_key
+    # 常數時間比較避免時序側信道；金鑰未設定（空字串）時一律視為非管理員
+    is_admin = bool(settings.admin_secret_key) and hmac.compare_digest(
+        req.admin_key, settings.admin_secret_key
+    )
 
     try:
         res = await sb.auth.sign_up({"email": req.email, "password": req.password})

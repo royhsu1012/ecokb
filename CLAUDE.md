@@ -34,11 +34,12 @@ ecokb/
 │   │   ├── documents.py   # 文件上傳、向量化
 │   │   └── graph.py
 │   └── services/
-│       ├── gemini.py      # Gemini 統一設定層（模型常數、configure、get_model）
-│       ├── llm.py         # 串流問答（asyncio queue 橋接）
-│       ├── embedding.py   # gemini-embedding-001（768 維，Semaphore(8) 限流）
-│       ├── ocr.py         # Gemini Vision OCR
-│       └── storage.py     # Supabase Storage bucket "documents"
+│       ├── gemini.py      # Gemini 統一設定層（模型常數、get_client）
+│       ├── rate_limit.py  # token bucket 限流 + 429 retry（15 RPM 韌性）
+│       ├── llm.py         # 串流問答（asyncio queue 橋接、LLMError 錯誤哨兵）
+│       ├── embedding.py   # gemini-embedding-001（768 維，限流 + retry）
+│       ├── ocr.py         # Gemini Vision OCR（限流 + retry）
+│       └── storage.py     # Supabase Storage（key 用 UUID ASCII-safe）
 ├── supabase/schema.sql    # vector(768)，HNSW index
 └── docs/decisions/        # ADR 架構決策文件
 ```
@@ -129,6 +130,14 @@ cd frontend && npm run build
 - 切換依據是相似度門檻 `SIMILARITY_THRESHOLD = 0.6`（`services/rag.py`），**不是** 檢索筆數（`match_chunks` 永遠回傳 top-k）
 - `services/llm.py` 拆 `GROUNDED_SYSTEM_PROMPT` / `GENERAL_SYSTEM_PROMPT` 兩種提示，共用底層 `_stream` / `_complete`
 - 調整引用鬆緊只需改 `SIMILARITY_THRESHOLD`
+
+## 安全與韌性規範
+- 帶 `conversation_id` 的請求一律經 `require_conversation_ownership`（驗證屬於該使用者且屬該 KB），防跨對話寫入
+- Gemini 呼叫（LLM/embedding/OCR）一律經 `services/rate_limit.py` 的 limiter + `with_retry`，避免撞 15 RPM
+- 串流錯誤用 `LLMError` 哨兵區分，**不存入對話、不洩漏 exception**；對外一律泛化錯誤訊息
+- Storage object key 一律 ASCII-safe（`storage.py` 用 UUID + 副檔名），中文原檔名存 DB `filename` 欄位
+- `config.py` 設 `extra="ignore"` 容忍多餘環境變數，避免部署時舊變數殘留導致啟動崩潰
+- 上傳採有界讀取（1MB/塊）防 OOM；空檔回 400、解析無內容標 `empty` 狀態
 
 ## 關鍵注意事項
 - Supabase Storage bucket 名稱：`documents`（需在 Dashboard 手動建立，Public，並加 storage.objects RLS 政策）

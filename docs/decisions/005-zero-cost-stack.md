@@ -49,3 +49,13 @@ date: 2026-07
 - Embedding 用 `output_dimensionality=768` 對齊既有 `vector(768)` schema，免資料庫遷移
 - Supabase 新版 API key（`sb_secret_` / `sb_publishable_`）非 JWT 格式，需 `supabase>=2.16`（本專案用 2.31.0）
 - 統一 Gemini 設定層 `services/gemini.py`，換模型只需改一處常數
+
+### 免費層韌性
+
+Gemini 免費層各模型約 15 RPM，是零成本方案的主要限制。大文件切成數十 chunk 時，
+單靠並發 Semaphore 擋不住速率會撞 429 導致整份失敗。因此新增 `services/rate_limit.py`：
+
+- **token bucket 限流**：把 embedding / LLM / OCR 呼叫壓在 14 RPM（留緩衝）
+- **429 指數退避重試**：短暫超限時自動退避重試，而非直接失敗
+
+Supabase Storage 的 object key 不接受非 ASCII 字元，中文檔名改用 UUID key（原檔名存 DB）。

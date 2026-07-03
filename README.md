@@ -121,6 +121,12 @@ Supabase 全表啟用 Row Level Security 作為資料層防線；後端另以 `r
 ### 8. 串流訊息在 [DONE] 前保存
 串流回答的持久化若放在送出 `[DONE]` 之後，客戶端收到 DONE 即斷線、generator 被取消，訊息遺失。將 `_save_messages` 移到 `[DONE]` **之前**執行，確保連線仍在時完成寫入。
 
+### 9. 免費層 15 RPM 韌性 — token bucket + 429 退避
+Gemini 免費層各模型約 15 RPM，大文件切成數十 chunk 時單靠並發 Semaphore 擋不住速率。`services/rate_limit.py` 以 token bucket 把 embedding / LLM / OCR 呼叫壓在門檻內，並對 429 指數退避重試，避免大文件整份失敗。
+
+### 10. Storage key 一律 ASCII-safe
+Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行資料.pdf` 會上傳失敗）。storage key 改用 `UUID + 副檔名`，中文原始檔名另存於 DB `filename` 欄位。
+
 ---
 
 ## 資料庫設計
@@ -151,9 +157,10 @@ Supabase 全表啟用 Row Level Security 作為資料層防線；後端另以 `r
                               寫入 chunks 表 → 狀態更新為「完成」
 ```
 
-- 大檔以 `Semaphore(8)` 限制並發 embedding，避免撞 Gemini 免費版 rate limit
+- embedding / OCR 經 `rate_limit.py`（token bucket + 429 退避）壓在 15 RPM 內，大檔不整份失敗
 - PDF 每頁文字少於 100 字自動轉 Gemini Vision OCR
-- 狀態機：等待 → 解析 → 向量化 → 完成 / 錯誤，前端輪詢顯示
+- Storage key 用 UUID（ASCII-safe），支援中文檔名；原檔名存 DB
+- 狀態機：等待 → 解析 → 向量化 → 完成 / 無內容 / 錯誤，前端自動輪詢顯示
 
 ---
 

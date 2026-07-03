@@ -4,6 +4,7 @@ from services.supabase_client import get_supabase
 from services.parser import detect_file_type, sha256, parse_file, chunk_text
 from services.embedding import embed_batch
 from services.storage import store_file, delete_file
+from services.keywords import extract_keywords
 from dependencies import get_current_user, require_kb_ownership
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -40,6 +41,14 @@ async def _process_document(doc_id: str, kb_id: str, data: bytes, file_type: str
         ]
         await sb.table("chunks").insert(rows).execute()
         await _set_status(sb, doc_id, {"status": "ready", "chunk_count": len(chunks)})
+
+        # 關鍵字供知識圖譜（混合：RPM 充裕走 Gemini，吃緊降級 jieba）。
+        # 與 ready 狀態解耦、best-effort：keywords 欄位未建或抽取失敗都不影響文件完成。
+        try:
+            keywords = await extract_keywords(text, top_k=8)
+            await sb.table("documents").update({"keywords": keywords}).eq("id", doc_id).execute()
+        except Exception as e:  # noqa: BLE001
+            print(f"[process] keyword store skipped for {doc_id}: {e}")
 
     except Exception as e:  # noqa: BLE001
         # 背景任務無 caller 承接 raise，改為記錄並確保狀態落地為 error

@@ -24,6 +24,7 @@ create table if not exists documents (
   storage_path text,   -- Supabase Storage path: {user_id}/{filename}
   public_url text,     -- Supabase Storage public URL
   chunk_count int default 0,
+  keywords jsonb default '[]'::jsonb,  -- 知識圖譜關鍵字（上傳時抽取，Gemini 或 jieba）
   created_at timestamptz default now()
 );
 alter table documents enable row level security;

@@ -21,19 +21,35 @@ class AsyncRateLimiter:
         self._last = time.monotonic()
         self._lock = asyncio.Lock()
 
+    def _refill(self) -> None:
+        now = time.monotonic()
+        self._allowance = min(
+            self._rate, self._allowance + (now - self._last) * (self._rate / self._per)
+        )
+        self._last = now
+
     async def acquire(self) -> None:
         async with self._lock:
             while True:
-                now = time.monotonic()
-                self._allowance = min(
-                    self._rate, self._allowance + (now - self._last) * (self._rate / self._per)
-                )
-                self._last = now
+                self._refill()
                 if self._allowance >= 1:
                     self._allowance -= 1
                     return
                 wait = (1 - self._allowance) * (self._per / self._rate)
                 await asyncio.sleep(wait)
+
+    async def try_acquire(self, min_reserve: float = 0.0) -> bool:
+        """非阻塞取用：僅在補充後餘額 > min_reserve 時消耗一個 token。
+
+        min_reserve 用於「保留額度給高優先任務」——關鍵字抽取（低優先）可設較高的
+        reserve，額度吃緊時就讓路、降級走 jieba。
+        """
+        async with self._lock:
+            self._refill()
+            if self._allowance >= 1 + min_reserve:
+                self._allowance -= 1
+                return True
+            return False
 
 
 # 每模型 15 RPM，留 1 次緩衝

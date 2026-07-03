@@ -6,7 +6,7 @@ from supabase._async.client import AsyncClient
 
 from services.supabase_client import get_supabase
 from services.rag import search_chunks, build_context
-from services.llm import stream_answer, complete_answer
+from services.llm import stream_answer, complete_answer, stream_general, complete_general, GENERAL_DISCLAIMER
 from schemas import ChatRequest, KBRequest, ConversationRequest
 from dependencies import get_current_user, require_kb_ownership
 
@@ -30,15 +30,22 @@ async def ask(
 
     chunks = await search_chunks(sb, req.kb_id, req.question)
     if not chunks:
-        no_data = "知識庫中未找到相關資料。"
-        if req.conversation_id:
-            await _save_messages(sb, req.conversation_id, req.question, no_data)
+        # 混合模式：知識庫無相關資料 → 用 AI 通用知識回答，並標註來源以區分
         if req.stream:
-            async def _no_data():
-                yield "data: " + json.dumps({"text": no_data}) + "\n\n"
+            async def _general():
+                full = [GENERAL_DISCLAIMER]
+                yield "data: " + json.dumps({"text": GENERAL_DISCLAIMER}) + "\n\n"
+                async for text in stream_general(req.question):
+                    full.append(text)
+                    yield "data: " + json.dumps({"text": text}) + "\n\n"
+                if req.conversation_id:
+                    await _save_messages(sb, req.conversation_id, req.question, "".join(full))
                 yield "data: [DONE]\n\n"
-            return StreamingResponse(_no_data(), media_type="text/event-stream")
-        return {"answer": no_data, "sources": []}
+            return StreamingResponse(_general(), media_type="text/event-stream")
+        answer = GENERAL_DISCLAIMER + await complete_general(req.question)
+        if req.conversation_id:
+            await _save_messages(sb, req.conversation_id, req.question, answer)
+        return {"answer": answer, "sources": []}
 
     context = build_context(chunks)
 

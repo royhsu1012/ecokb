@@ -267,7 +267,19 @@ Supabase 全表啟用 Row Level Security 作為資料層防線；後端另以 `r
 
 ## 線上展示
 
-🌐 **[ecokb.vercel.app](https://ecokb.vercel.app)** — Demo 模式免帳號試用；或以管理員金鑰註冊後上傳自己的文件問答。
+🌐 **[ecokb.vercel.app](https://ecokb.vercel.app)**
+
+### 訪客試用 · 兩種入口
+
+**① Demo 模式（最快，免帳號）**
+登入頁點 **「Demo 模式（無需帳號）」** → 直接進入，體驗對話介面與範例。
+
+**② 註冊帳號（可上傳自己的文件、真正跑 RAG）**
+1. 登入頁點「免費註冊」，填入 email + 密碼
+2. **管理員金鑰**（選填）：`EconKB-Admin-2026`
+3. 註冊後直接登入 → 管理後台上傳文件 → 對話頁提問
+
+> 🔑 上方金鑰僅供公開試用，之後會更換。
 
 <div align="center">
 

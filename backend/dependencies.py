@@ -26,3 +26,10 @@ async def require_kb_ownership(sb: AsyncClient, kb_id: str, user_id: str) -> Non
     kb = await sb.table("knowledge_bases").select("id").eq("id", kb_id).eq("user_id", user_id).execute()
     if not kb.data:
         raise HTTPException(status_code=403, detail="Knowledge base not found or access denied")
+
+
+async def require_conversation_ownership(sb: AsyncClient, conversation_id: str, user_id: str, kb_id: str) -> None:
+    """驗證對話屬於該使用者且屬於指定知識庫，否則拋 403。防止跨對話寫入。"""
+    conv = await sb.table("conversations").select("id").eq("id", conversation_id).eq("user_id", user_id).eq("kb_id", kb_id).limit(1).execute()
+    if not conv.data:
+        raise HTTPException(status_code=403, detail="Conversation not found or access denied")

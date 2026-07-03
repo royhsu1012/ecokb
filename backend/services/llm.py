@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from google.genai import types
 
 from services.gemini import LLM_MODEL, get_client
+from services.rate_limit import generation_limiter, with_retry
 
 # 嚴格模式：只根據知識庫段落回答並引用來源
 GROUNDED_SYSTEM_PROMPT = """你是 EconKB 經濟學知識庫助理。請嚴格根據以下知識庫內容回答問題。
@@ -30,7 +31,19 @@ _GROUNDED_CONFIG = types.GenerateContentConfig(system_instruction=GROUNDED_SYSTE
 _GENERAL_CONFIG = types.GenerateContentConfig(system_instruction=GENERAL_SYSTEM_PROMPT)
 
 
+class LLMError(Exception):
+    """LLM 生成失敗，供上層區分「錯誤」與「正常內容」。"""
+
+
+class _ErrorSignal:
+    """queue 中的錯誤哨兵，攜帶內部訊息（僅記錄於伺服器，不外洩前端）。"""
+
+    def __init__(self, message: str):
+        self.message = message
+
+
 async def _stream(prompt: str, config: types.GenerateContentConfig) -> AsyncGenerator[str, None]:
+    await generation_limiter.acquire()
     queue: asyncio.Queue = asyncio.Queue()
     loop = asyncio.get_running_loop()
 
@@ -41,24 +54,32 @@ async def _stream(prompt: str, config: types.GenerateContentConfig) -> AsyncGene
             ):
                 if chunk.text:
                     loop.call_soon_threadsafe(queue.put_nowait, chunk.text)
-        except Exception as e:
-            loop.call_soon_threadsafe(queue.put_nowait, f"錯誤：{e}")
+        except Exception as e:  # noqa: BLE001
+            loop.call_soon_threadsafe(queue.put_nowait, _ErrorSignal(str(e)))
         finally:
             loop.call_soon_threadsafe(queue.put_nowait, None)
 
     loop.run_in_executor(None, _run)
     while True:
-        text = await queue.get()
-        if text is None:
+        item = await queue.get()
+        if item is None:
             break
-        yield text
+        if isinstance(item, _ErrorSignal):
+            # 記錄內部細節於伺服器日誌，對外只拋出泛化錯誤
+            print(f"[llm] stream error: {item.message}")
+            raise LLMError("生成失敗")
+        yield item
 
 
 async def _complete(prompt: str, config: types.GenerateContentConfig) -> str:
-    response = await asyncio.to_thread(
-        get_client().models.generate_content, model=LLM_MODEL, contents=prompt, config=config,
-    )
-    return response.text or ""
+    async def _call() -> str:
+        await generation_limiter.acquire()
+        response = await asyncio.to_thread(
+            get_client().models.generate_content, model=LLM_MODEL, contents=prompt, config=config,
+        )
+        return response.text or ""
+
+    return await with_retry(_call)
 
 
 # ---- 嚴格模式（有知識庫資料）----

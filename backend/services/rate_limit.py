@@ -1,0 +1,59 @@
+"""Gemini 免費方案速率限制韌性工具。
+
+免費層各模型約 15 RPM（每分鐘請求數，非並發數）。大文件切成數十 chunk 時，
+單靠並發 Semaphore 擋不住 RPM，會在數秒內撞 429。此模組提供：
+
+- AsyncRateLimiter：token bucket，把請求速率壓在門檻內
+- with_retry：對 429 / RESOURCE_EXHAUSTED 做指數退避重試
+"""
+import asyncio
+import time
+from typing import Awaitable, Callable, TypeVar
+
+T = TypeVar("T")
+
+
+class AsyncRateLimiter:
+    def __init__(self, rate: int, per: float = 60.0):
+        self._rate = rate
+        self._per = per
+        self._allowance = float(rate)
+        self._last = time.monotonic()
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        async with self._lock:
+            while True:
+                now = time.monotonic()
+                self._allowance = min(
+                    self._rate, self._allowance + (now - self._last) * (self._rate / self._per)
+                )
+                self._last = now
+                if self._allowance >= 1:
+                    self._allowance -= 1
+                    return
+                wait = (1 - self._allowance) * (self._per / self._rate)
+                await asyncio.sleep(wait)
+
+
+# 每模型 15 RPM，留 1 次緩衝
+embedding_limiter = AsyncRateLimiter(rate=14)
+generation_limiter = AsyncRateLimiter(rate=14)
+
+
+def _is_rate_limit(e: Exception) -> bool:
+    s = str(e)
+    return "429" in s or "RESOURCE_EXHAUSTED" in s or "quota" in s.lower()
+
+
+async def with_retry(fn: Callable[[], Awaitable[T]], *, retries: int = 4, base: float = 2.0) -> T:
+    """對 429 指數退避重試；其他例外直接拋出。"""
+    for attempt in range(retries):
+        try:
+            return await fn()
+        except Exception as e:  # noqa: BLE001
+            if _is_rate_limit(e) and attempt < retries - 1:
+                await asyncio.sleep(base * (2 ** attempt))
+                continue
+            raise
+    raise RuntimeError("unreachable")

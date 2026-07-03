@@ -3,8 +3,9 @@ import asyncio
 from google.genai import types
 
 from services.gemini import EMBEDDING_MODEL, EMBEDDING_DIM, get_client
+from services.rate_limit import embedding_limiter, with_retry
 
-# Google 免費方案 embedding API 有速率限制，限制並發避免 429
+# 並發上限（配合 rate limiter 一起壓）
 _semaphore = asyncio.Semaphore(8)
 
 
@@ -18,7 +19,11 @@ def _embed_sync(text: str, task_type: str) -> list[float]:
 
 
 async def embed_text(text: str, task_type: str = "RETRIEVAL_QUERY") -> list[float]:
-    return await asyncio.to_thread(_embed_sync, text, task_type)
+    async def _call() -> list[float]:
+        await embedding_limiter.acquire()
+        return await asyncio.to_thread(_embed_sync, text, task_type)
+
+    return await with_retry(_call)
 
 
 async def _embed_one(text: str) -> list[float]:

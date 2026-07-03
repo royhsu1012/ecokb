@@ -6,11 +6,16 @@ from supabase._async.client import AsyncClient
 
 from services.supabase_client import get_supabase
 from services.rag import search_chunks, build_context
-from services.llm import stream_answer, complete_answer, stream_general, complete_general, GENERAL_DISCLAIMER
+from services.llm import (
+    stream_answer, complete_answer, stream_general, complete_general,
+    GENERAL_DISCLAIMER, LLMError,
+)
 from schemas import ChatRequest, KBRequest, ConversationRequest
-from dependencies import get_current_user, require_kb_ownership
+from dependencies import get_current_user, require_kb_ownership, require_conversation_ownership
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+STREAM_ERROR_TEXT = "\n\n⚠️ 生成失敗，請稍後再試。"
 
 
 async def _save_messages(sb: AsyncClient, conversation_id: str, question: str, answer: str) -> None:
@@ -20,6 +25,10 @@ async def _save_messages(sb: AsyncClient, conversation_id: str, question: str, a
     ]).execute()
 
 
+def _sources_of(chunks: list[dict]) -> list[dict]:
+    return [{"index": i + 1, "content": c["content"][:200]} for i, c in enumerate(chunks)]
+
+
 @router.post("/ask")
 async def ask(
     req: ChatRequest,
@@ -27,6 +36,9 @@ async def ask(
     current_user: dict = Depends(get_current_user),
 ):
     await require_kb_ownership(sb, req.kb_id, current_user["user_id"])
+    # 有帶 conversation_id 時，驗證該對話屬於此使用者且屬於此知識庫（防跨對話寫入）
+    if req.conversation_id:
+        await require_conversation_ownership(sb, req.conversation_id, current_user["user_id"], req.kb_id)
 
     chunks = await search_chunks(sb, req.kb_id, req.question)
     if not chunks:
@@ -35,9 +47,15 @@ async def ask(
             async def _general():
                 full = [GENERAL_DISCLAIMER]
                 yield "data: " + json.dumps({"text": GENERAL_DISCLAIMER}) + "\n\n"
-                async for text in stream_general(req.question):
-                    full.append(text)
-                    yield "data: " + json.dumps({"text": text}) + "\n\n"
+                try:
+                    async for text in stream_general(req.question):
+                        full.append(text)
+                        yield "data: " + json.dumps({"text": text}) + "\n\n"
+                except LLMError:
+                    # 生成失敗：對外泛化訊息、不存入對話
+                    yield "data: " + json.dumps({"text": STREAM_ERROR_TEXT}) + "\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
                 if req.conversation_id:
                     await _save_messages(sb, req.conversation_id, req.question, "".join(full))
                 yield "data: [DONE]\n\n"
@@ -48,14 +66,21 @@ async def ask(
         return {"answer": answer, "sources": []}
 
     context = build_context(chunks)
+    sources = _sources_of(chunks)
 
     if req.stream:
         async def _stream():
             full_answer = []
-            async for text in stream_answer(req.question, context):
-                full_answer.append(text)
-                yield "data: " + json.dumps({"text": text}) + "\n\n"
-            # 在送出 [DONE] 前先保存，避免客戶端斷線導致 generator 被取消、訊息遺失
+            try:
+                async for text in stream_answer(req.question, context):
+                    full_answer.append(text)
+                    yield "data: " + json.dumps({"text": text}) + "\n\n"
+            except LLMError:
+                yield "data: " + json.dumps({"text": STREAM_ERROR_TEXT}) + "\n\n"
+                yield "data: [DONE]\n\n"
+                return
+            # 串流結束前補送來源，並在 [DONE] 前保存（避免斷線遺失）
+            yield "data: " + json.dumps({"sources": sources}) + "\n\n"
             if req.conversation_id:
                 await _save_messages(sb, req.conversation_id, req.question, "".join(full_answer))
             yield "data: [DONE]\n\n"
@@ -64,7 +89,6 @@ async def ask(
     answer = await complete_answer(req.question, context)
     if req.conversation_id:
         await _save_messages(sb, req.conversation_id, req.question, answer)
-    sources = [{"index": i + 1, "content": c["content"][:200]} for i, c in enumerate(chunks)]
     return {"answer": answer, "sources": sources}
 
 

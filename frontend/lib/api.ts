@@ -82,7 +82,13 @@ export const api = {
     delete: (id: string) => request(`/chat/conversations/${id}`, { method: "DELETE" }),
   },
   chat: {
-    ask: async (kb_id: string, question: string, onChunk: (text: string) => void, conversation_id?: string) => {
+    ask: async (
+      kb_id: string,
+      question: string,
+      onChunk: (text: string) => void,
+      conversation_id?: string,
+      onSources?: (sources: { index: number; content: string }[]) => void,
+    ) => {
       const token = localStorage.getItem("access_token");
       const res = await fetch(`${BASE}/chat/ask`, {
         method: "POST",
@@ -112,8 +118,9 @@ export const api = {
             const data = line.slice(6);
             if (data === "[DONE]") return;
             try {
-              const { text } = JSON.parse(data);
-              onChunk(text);
+              const parsed = JSON.parse(data);
+              if (typeof parsed.text === "string") onChunk(parsed.text);
+              else if (parsed.sources) onSources?.(parsed.sources);
             } catch {}
           }
         }

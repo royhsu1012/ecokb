@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from supabase._async.client import AsyncClient
 from services.supabase_client import get_supabase
-from dependencies import get_current_user
+from dependencies import get_current_user, require_kb_ownership
 
 router = APIRouter(prefix="/graph", tags=["graph"])
 
@@ -12,9 +12,7 @@ async def get_graph(
     sb: AsyncClient = Depends(get_supabase),
     current_user: dict = Depends(get_current_user),
 ):
-    kb = await sb.table("knowledge_bases").select("id").eq("id", kb_id).eq("user_id", current_user["user_id"]).execute()
-    if not kb.data:
-        raise HTTPException(status_code=403, detail="Knowledge base not found or access denied")
+    await require_kb_ownership(sb, kb_id, current_user["user_id"])
 
     docs = await sb.table("documents").select("id,filename,file_type,status").eq("kb_id", kb_id).execute()
     chunks = await sb.table("chunks").select("id,doc_id,content").eq("kb_id", kb_id).limit(200).execute()

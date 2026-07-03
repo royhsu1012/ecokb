@@ -26,15 +26,18 @@ ecokb/
 ├── backend/
 │   ├── main.py
 │   ├── config.py          # 環境變數（GOOGLE_API_KEY, SUPABASE_*）
-│   ├── dependencies.py    # get_current_user JWT 驗證
+│   ├── schemas.py         # 所有 Pydantic 請求模型（router 不自帶 schema）
+│   ├── dependencies.py    # get_current_user JWT 驗證、require_kb_ownership
 │   ├── routers/
 │   │   ├── auth.py
 │   │   ├── chat.py        # SSE 串流回答（Gemini）
 │   │   ├── documents.py   # 文件上傳、向量化
 │   │   └── graph.py
 │   └── services/
-│       ├── llm.py         # Gemini 2.0 Flash（asyncio queue 串流）
-│       ├── embedding.py   # Google text-embedding-004（768 維）
+│       ├── gemini.py      # Gemini 統一設定層（模型常數、configure、get_model）
+│       ├── llm.py         # 串流問答（asyncio queue 橋接）
+│       ├── embedding.py   # text-embedding-004（768 維，Semaphore(8) 限流）
+│       ├── ocr.py         # Gemini Vision OCR
 │       └── storage.py     # Supabase Storage bucket "documents"
 ├── supabase/schema.sql    # vector(768)，HNSW index
 └── docs/decisions/        # ADR 架構決策文件
@@ -99,6 +102,12 @@ cd frontend && npm run build
 - 所有受保護路由注入 `current_user: dict = Depends(get_current_user)`
 - `get_current_user` 在 `backend/dependencies.py`，透過 Supabase `auth.get_user(token)` 驗證 Bearer JWT
 - `user_id` 一律從 JWT 取得，**不接受** 從 form/body 傳入
+- KB 擁有權檢查一律用 `await require_kb_ownership(sb, kb_id, user_id)`（`dependencies.py`），**不要** 在 router 內重寫查詢
+
+## 後端分層規範
+- Pydantic 請求模型放 `backend/schemas.py`，**不要** 定義在 router 檔案內
+- Gemini 相關設定（API key configure、模型名稱）只在 `services/gemini.py`，其他服務透過 `get_model()` / `ensure_configured()` 取用
+- 前端 401 處理統一走 `api.ts` 的 `handleUnauthorized()`（內部呼叫 `clearSession()`）
 
 ## 後端 LLM 串流架構
 - `services/llm.py` 使用 `asyncio.Queue` 橋接同步 Gemini SDK 與 FastAPI 非同步

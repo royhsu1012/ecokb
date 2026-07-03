@@ -4,7 +4,7 @@ from services.supabase_client import get_supabase
 from services.parser import detect_file_type, sha256, parse_file, chunk_text
 from services.embedding import embed_batch
 from services.storage import store_file, delete_file
-from dependencies import get_current_user
+from dependencies import get_current_user, require_kb_ownership
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -58,9 +58,7 @@ async def upload_document(
         raise HTTPException(status_code=413, detail="File too large (max 50MB)")
     file_hash = sha256(data)
 
-    kb = await sb.table("knowledge_bases").select("id").eq("id", kb_id).eq("user_id", user_id).execute()
-    if not kb.data:
-        raise HTTPException(status_code=403, detail="Knowledge base not found or access denied")
+    await require_kb_ownership(sb, kb_id, user_id)
 
     existing = await sb.table("documents").select("id").eq("hash", file_hash).eq("kb_id", kb_id).execute()
     if existing.data:

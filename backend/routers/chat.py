@@ -1,21 +1,16 @@
 import json
+
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from supabase._async.client import AsyncClient
+
 from services.supabase_client import get_supabase
 from services.rag import search_chunks, build_context
 from services.llm import stream_answer, complete_answer
-from dependencies import get_current_user
+from schemas import ChatRequest, KBRequest
+from dependencies import get_current_user, require_kb_ownership
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-
-class ChatRequest(BaseModel):
-    kb_id: str
-    question: str
-    conversation_id: str | None = None
-    stream: bool = True
 
 
 @router.post("/ask")
@@ -24,9 +19,7 @@ async def ask(
     sb: AsyncClient = Depends(get_supabase),
     current_user: dict = Depends(get_current_user),
 ):
-    kb = await sb.table("knowledge_bases").select("id").eq("id", req.kb_id).eq("user_id", current_user["user_id"]).execute()
-    if not kb.data:
-        raise HTTPException(status_code=403, detail="Knowledge base not found or access denied")
+    await require_kb_ownership(sb, req.kb_id, current_user["user_id"])
 
     chunks = await search_chunks(sb, req.kb_id, req.question)
     if not chunks:
@@ -49,10 +42,6 @@ async def ask(
     answer = await complete_answer(req.question, context)
     sources = [{"index": i + 1, "content": c["content"][:200]} for i, c in enumerate(chunks)]
     return {"answer": answer, "sources": sources}
-
-
-class KBRequest(BaseModel):
-    name: str
 
 
 @router.get("/kb/{user_id}")

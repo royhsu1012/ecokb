@@ -1,7 +1,9 @@
 import asyncio
 import base64
-import google.generativeai as genai
-from config import get_settings
+
+from services.gemini import get_model
+
+OCR_PROMPT = "請將圖片中的所有文字完整轉錄出來，保持原有段落結構，支援繁體中文、英文及數字。只輸出文字內容，不要加說明。"
 
 
 async def ocr_image(base64_img: str, media_type: str = "image/jpeg") -> str:
@@ -14,10 +16,9 @@ async def ocr_pdf_page(page_pixmap_bytes: bytes) -> str:
 
 
 def _ocr_sync(b64_img: str, mime_type: str) -> str:
-    genai.configure(api_key=get_settings().google_api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = get_model()
     response = model.generate_content([
         {"inline_data": {"mime_type": mime_type, "data": b64_img}},
-        "請將圖片中的所有文字完整轉錄出來，保持原有段落結構，支援繁體中文、英文及數字。只輸出文字內容，不要加說明。",
+        OCR_PROMPT,
     ])
     return response.text

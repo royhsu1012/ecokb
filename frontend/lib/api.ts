@@ -1,8 +1,15 @@
 import type { Document } from "./types";
+import { clearSession } from "./auth";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface KnowledgeBase { id: string; name: string; user_id: string; created_at: string; }
+
+function handleUnauthorized(): never {
+  clearSession();
+  window.location.href = "/";
+  throw new Error("Session expired");
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
@@ -14,13 +21,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   });
-  if (res.status === 401) {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("kb_id");
-    window.location.href = "/";
-    throw new Error("Session expired");
-  }
+  if (res.status === 401) handleUnauthorized();
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || "Request failed");
@@ -78,13 +79,7 @@ export const api = {
         },
         body: JSON.stringify({ kb_id, question, stream: true }),
       });
-      if (res.status === 401) {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("user_id");
-        localStorage.removeItem("kb_id");
-        window.location.href = "/";
-        throw new Error("Session expired");
-      }
+      if (res.status === 401) handleUnauthorized();
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
         throw new Error(err.detail || "Request failed");

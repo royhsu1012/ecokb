@@ -1,21 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, EmailStr
 from supabase._async.client import AsyncClient
+
 from services.supabase_client import get_supabase
+from schemas import RegisterRequest, LoginRequest
 from config import get_settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-class RegisterRequest(BaseModel):
-    email: EmailStr
-    password: str
-    admin_key: str = ""
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
 
 
 @router.post("/register")
@@ -45,7 +35,7 @@ async def register(req: RegisterRequest, sb: AsyncClient = Depends(get_supabase)
 async def login(req: LoginRequest, sb: AsyncClient = Depends(get_supabase)):
     try:
         res = await sb.auth.sign_in_with_password({"email": req.email, "password": req.password})
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     session = res.session

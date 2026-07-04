@@ -34,8 +34,24 @@ _EN_STOPWORDS = {
 }
 
 
+# 常見經濟/金融英文術語 → 繁體中文（jieba 降級路徑無法翻譯，靠此對照表收斂）。
+# 僅收語意明確的單詞；未收錄者維持英文（降級路徑固有限制）。
+_EN_ZH = {
+    "inflation": "通貨膨脹", "deflation": "通貨緊縮", "recession": "經濟衰退",
+    "unemployment": "失業", "gdp": "國內生產毛額", "cpi": "消費者物價指數",
+    "fed": "聯準會", "tightening": "緊縮", "easing": "寬鬆", "liquidity": "流動性",
+    "deficit": "赤字", "surplus": "盈餘", "tariff": "關稅", "currency": "貨幣",
+    "bond": "債券", "bonds": "債券", "yield": "殖利率", "equity": "股權",
+    "economy": "經濟", "economic": "經濟", "monetary": "貨幣政策", "fiscal": "財政",
+    "payroll": "就業", "mortgage": "房貸", "volatility": "波動", "stimulus": "刺激",
+    "hawkish": "鷹派", "dovish": "鴿派", "market": "市場", "markets": "市場",
+    "stock": "股票", "stocks": "股票", "growth": "成長", "committee": "委員會",
+    "employment": "就業", "labor": "勞動", "debt": "債務", "credit": "信用",
+}
+
+
 def jieba_keywords(text: str, top_k: int = 8) -> list[str]:
-    """方案 A：jieba 統計抽取（無 API）。"""
+    """方案 A：jieba 統計抽取（無 API）。英文常見術語經 _EN_ZH 收斂為繁中。"""
     if not text or not text.strip():
         return []
     candidates = jieba.analyse.extract_tags(
@@ -49,6 +65,7 @@ def jieba_keywords(text: str, top_k: int = 8) -> list[str]:
         if w.isascii():
             if w.lower() in _EN_STOPWORDS or len(w) < 3 or not any(c.isalpha() for c in w):
                 continue
+            w = _EN_ZH.get(w.lower(), w)  # 常見術語翻繁中，未知維持英文
         elif len(w) < 2:
             continue
         if w not in out:
@@ -60,9 +77,11 @@ def jieba_keywords(text: str, top_k: int = 8) -> list[str]:
 
 def _gemini_sync(text: str, top_k: int) -> list[str]:
     prompt = (
-        f"從以下文件抽取最多 {top_k} 個最能代表主題的關鍵詞或概念"
-        "（名詞、專有名詞、主題概念；中文用繁體、英文保留原文）。"
-        '只輸出 JSON 字串陣列，例如 ["貨幣政策","聯邦基金利率","通貨膨脹"]，不要任何其他文字。\n\n'
+        f"從以下文件抽取最多 {top_k} 個最能代表主題的關鍵詞或概念（名詞、專有名詞、主題概念）。\n"
+        "規則：\n"
+        "1. 一律輸出繁體中文——英文概念也翻譯成繁中（inflation→通貨膨脹、Federal Reserve→聯準會）\n"
+        "2. 使用標準正式術語，同一概念用同一詞（央行/中華民國中央銀行→中央銀行；通膨→通貨膨脹）\n"
+        '3. 只輸出 JSON 字串陣列，例如 ["中央銀行","貨幣政策","通貨膨脹"]，不要任何其他文字。\n\n'
         f"{text[:4000]}"
     )
     resp = get_client().models.generate_content(model=LLM_MODEL, contents=prompt)

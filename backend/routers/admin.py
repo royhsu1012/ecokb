@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from supabase._async.client import AsyncClient
 
-from services.supabase_client import get_supabase
+from services.supabase_client import get_supabase, get_admin_client
 from services.storage import delete_file
 from dependencies import require_admin
 
@@ -10,11 +10,11 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 @router.get("/members")
 async def list_members(
-    sb: AsyncClient = Depends(get_supabase),
     admin: dict = Depends(require_admin),
 ):
     """列出所有會員（管理員限定）。"""
-    res = await sb.auth.admin.list_users()
+    admin_sb = await get_admin_client()
+    res = await admin_sb.auth.admin.list_users()
     users = res if isinstance(res, list) else getattr(res, "users", [])
     return [
         {
@@ -45,7 +45,8 @@ async def delete_member(
             await delete_file(sb, path)
 
     try:
-        await sb.auth.admin.delete_user(user_id)
+        admin_sb = await get_admin_client()
+        await admin_sb.auth.admin.delete_user(user_id)
     except Exception as e:  # noqa: BLE001
         print(f"[admin] delete user failed: {e}")
         raise HTTPException(status_code=404, detail="會員不存在或刪除失敗")

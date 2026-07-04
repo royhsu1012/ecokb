@@ -3,7 +3,7 @@ import hmac
 from fastapi import APIRouter, HTTPException, Depends
 from supabase._async.client import AsyncClient
 
-from services.supabase_client import get_supabase
+from services.supabase_client import get_supabase, get_admin_client
 from schemas import RegisterRequest, LoginRequest
 from config import get_settings
 
@@ -29,10 +29,12 @@ async def register(req: RegisterRequest, sb: AsyncClient = Depends(get_supabase)
     if not user:
         raise HTTPException(status_code=400, detail="註冊失敗，請稍後再試")
 
-    # 管理員身份存進 app_metadata（伺服器控制、使用者無法竄改）
+    # 管理員身份存進 app_metadata（伺服器控制、使用者無法竄改）。
+    # 用獨立 admin client：sign_up 已把 sb 的 session 設為新使用者，用 sb 做 admin 操作會被擋。
     if is_admin:
         try:
-            await sb.auth.admin.update_user_by_id(user.id, {"app_metadata": {"is_admin": True}})
+            admin_sb = await get_admin_client()
+            await admin_sb.auth.admin.update_user_by_id(user.id, {"app_metadata": {"is_admin": True}})
         except Exception as e:  # noqa: BLE001
             print(f"[auth] set admin metadata failed: {e}")
 

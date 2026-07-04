@@ -1,10 +1,10 @@
 from supabase._async.client import AsyncClient
+from constants import SIMILARITY_THRESHOLD
 from services.embedding import embed_text
 
-# 相似度門檻：match_chunks 一律回傳最接近的 top_k 筆（無論相關與否），
-# 低於此值視為「知識庫無相關資料」，交由上層改用通用知識模式回答。
+# 相似度門檻（SIMILARITY_THRESHOLD，定義於 constants.py）：match_chunks 一律回傳最接近
+# 的 top_k 筆（無論相關與否），低於此值視為「知識庫無相關資料」，交由上層改用通用模式。
 # 依 gemini-embedding-001 實測：切題約 0.7+、不切題約 0.5，0.6 為安全分界。
-SIMILARITY_THRESHOLD = 0.6
 
 
 async def search_chunks(

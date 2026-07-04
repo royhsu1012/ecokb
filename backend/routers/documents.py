@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, BackgroundTasks
 from supabase._async.client import AsyncClient
+from constants import MAX_UPLOAD_BYTES, CHUNK_SIZE, CHUNK_OVERLAP
 from services.supabase_client import get_supabase
 from services.parser import detect_file_type, sha256, parse_file, chunk_text
 from services.embedding import embed_batch
@@ -8,8 +9,6 @@ from services.keywords import extract_keywords
 from dependencies import get_current_user, require_kb_ownership
 
 router = APIRouter(prefix="/documents", tags=["documents"])
-
-MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 
 async def _set_status(sb: AsyncClient, doc_id: str, fields: dict) -> None:
@@ -26,7 +25,7 @@ async def _process_document(doc_id: str, kb_id: str, data: bytes, file_type: str
 
         text = await parse_file(data, file_type)
 
-        chunks = chunk_text(text, size=400, overlap=80)
+        chunks = chunk_text(text, size=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
         if not chunks:
             # 有檔案但解析不出內容（空白/純圖無字）→ 標 empty 而非 ready，避免誤導
             await _set_status(sb, doc_id, {"status": "empty", "chunk_count": 0})

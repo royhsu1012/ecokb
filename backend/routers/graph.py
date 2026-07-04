@@ -3,13 +3,12 @@ from itertools import combinations
 
 from fastapi import APIRouter, Depends
 from supabase._async.client import AsyncClient
+from constants import KEYWORDS_PER_DOC
 from services.supabase_client import get_supabase
 from services.keywords import jieba_keywords
 from dependencies import get_current_user, require_kb_ownership
 
 router = APIRouter(prefix="/graph", tags=["graph"])
-
-KEYWORDS_PER_DOC = 8
 
 
 @router.get("/{kb_id}")
@@ -54,7 +53,14 @@ async def get_graph(
         def _fallback() -> dict[str, list[str]]:
             return {d: jieba_keywords("\n".join(parts), KEYWORDS_PER_DOC) for d, parts in text_by_doc.items()}
 
-        doc_keywords.update(await asyncio.to_thread(_fallback))
+        computed = await asyncio.to_thread(_fallback)
+        doc_keywords.update(computed)
+        # 回填 DB，下次開圖譜命中已存路徑、免重算（best-effort，不阻斷回應正確性）
+        for d_id, kws in computed.items():
+            try:
+                await sb.table("documents").update({"keywords": kws}).eq("id", d_id).execute()
+            except Exception:
+                pass
 
     kw_nodes: dict[str, dict] = {}
     cooccur: set[tuple[str, str]] = set()

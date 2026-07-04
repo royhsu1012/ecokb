@@ -26,6 +26,7 @@ ecokb/
 ├── backend/
 │   ├── main.py
 │   ├── config.py          # 環境變數（GOOGLE_API_KEY, SUPABASE_*）
+│   ├── constants.py       # 可調參數集中處（門檻/上限/RPM，調校單一入口）
 │   ├── schemas.py         # 所有 Pydantic 請求模型（router 不自帶 schema）
 │   ├── dependencies.py    # get_current_user JWT 驗證、require_kb_ownership
 │   ├── routers/

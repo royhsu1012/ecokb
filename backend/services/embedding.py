@@ -2,11 +2,12 @@ import asyncio
 
 from google.genai import types
 
+from constants import EMBED_CONCURRENCY
 from services.gemini import EMBEDDING_MODEL, EMBEDDING_DIM, get_client
 from services.rate_limit import embedding_limiter, with_retry
 
 # 並發上限（配合 rate limiter 一起壓）
-_semaphore = asyncio.Semaphore(8)
+_semaphore = asyncio.Semaphore(EMBED_CONCURRENCY)
 
 
 def _embed_sync(text: str, task_type: str) -> list[float]:

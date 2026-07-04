@@ -12,11 +12,9 @@ import re
 
 import jieba.analyse
 
+from constants import KEYWORD_RPM_RESERVE
 from services.gemini import LLM_MODEL, get_client
 from services.rate_limit import generation_limiter
-
-# 保留 3 個 RPM 額度給高優先的問答/OCR，關鍵字抽取只在額度充裕時走 Gemini
-_KEYWORD_RPM_RESERVE = 3.0
 
 # 只保留有語意的詞性：名詞/地名/人名/機構名/其他專名/動名詞/英文
 _ALLOW_POS = ("n", "ns", "nr", "nt", "nz", "vn", "eng")
@@ -80,7 +78,7 @@ async def extract_keywords(text: str, top_k: int = 8) -> list[str]:
     """混合：RPM 充裕走 Gemini（B），吃緊或失敗降級 jieba（A）。"""
     if not text or not text.strip():
         return []
-    if await generation_limiter.try_acquire(min_reserve=_KEYWORD_RPM_RESERVE):
+    if await generation_limiter.try_acquire(min_reserve=KEYWORD_RPM_RESERVE):
         try:
             kws = await asyncio.to_thread(_gemini_sync, text, top_k)
             if kws:

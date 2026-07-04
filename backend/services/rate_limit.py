@@ -10,6 +10,8 @@ import asyncio
 import time
 from typing import Awaitable, Callable, TypeVar
 
+from constants import GEMINI_RPM
+
 T = TypeVar("T")
 
 
@@ -52,9 +54,9 @@ class AsyncRateLimiter:
             return False
 
 
-# 每模型 15 RPM，留 1 次緩衝
-embedding_limiter = AsyncRateLimiter(rate=14)
-generation_limiter = AsyncRateLimiter(rate=14)
+# 每模型 RPM 上限（免費層 ~15，留緩衝）
+embedding_limiter = AsyncRateLimiter(rate=GEMINI_RPM)
+generation_limiter = AsyncRateLimiter(rate=GEMINI_RPM)
 
 
 def _is_rate_limit(e: Exception) -> bool:

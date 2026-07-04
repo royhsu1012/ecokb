@@ -41,13 +41,49 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+# 遞迴切塊 separator（由粗到細）：段落 → 換行 → 中英句末 → 分號逗號 → 空白 → 字元。
+# 加中文標點（。！？；，）避免在句/詞中間切斷（ADR-008、研究驗證）。
+_SEPARATORS = ["\n\n", "\n", "。", "！", "？", ".", "!", "?", "；", ";", "，", ",", " ", ""]
+
+
+def _split_keep(text: str, sep: str) -> list[str]:
+    """以 sep 切分，並把 sep 保留在前一段末尾（句末標點不脫離句子）。"""
+    if sep == "":
+        return list(text)
+    segs = text.split(sep)
+    out = []
+    for i, s in enumerate(segs):
+        piece = s + sep if i < len(segs) - 1 else s
+        if piece:
+            out.append(piece)
+    return out
+
+
+def _recursive_split(text: str, size: int, seps: list[str]) -> list[str]:
+    if len(text) <= size or not seps:
+        return [text]
+    out: list[str] = []
+    for piece in _split_keep(text, seps[0]):
+        out.extend(_recursive_split(piece, size, seps[1:]) if len(piece) > size else [piece])
+    return out
+
+
 def chunk_text(text: str, size: int = 400, overlap: int = 80) -> list[str]:
-    chunks, start = [], 0
-    while start < len(text):
-        end = start + size
-        chunks.append(text[start:end])
-        start += size - overlap
-    return [c for c in chunks if c.strip()]
+    """遞迴語意邊界切塊：沿句/段邊界切，貪婪合併至 size，塊間留 overlap 字元續接。"""
+    text = (text or "").strip()
+    if not text:
+        return []
+    units = _recursive_split(text, size, _SEPARATORS)
+    chunks: list[str] = []
+    cur = ""
+    for u in units:
+        if cur and len(cur) + len(u) > size:
+            chunks.append(cur)
+            cur = cur[-overlap:] if overlap else ""  # 續接前塊尾端，維持上下文
+        cur += u
+    if cur.strip():
+        chunks.append(cur)
+    return [c.strip() for c in chunks if c.strip()]
 
 
 async def parse_file(data: bytes, file_type: str) -> str:

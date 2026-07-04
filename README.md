@@ -157,6 +157,7 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
                               寫入 chunks 表 → 狀態更新為「完成」
 ```
 
+- 切塊採**遞迴語意邊界**（段落→句子→詞，含中文標點），不切在句/詞中間（[ADR-008](docs/decisions/008-recursive-chunking.md)）
 - embedding / OCR 經 `rate_limit.py`（token bucket + 429 退避）壓在 15 RPM 內，大檔不整份失敗
 - PDF 每頁文字少於 100 字自動轉 Gemini Vision OCR
 - Storage key 用 UUID（ASCII-safe），支援中文檔名；原檔名存 DB
@@ -226,6 +227,7 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 | [ADR-005](docs/decisions/005-zero-cost-stack.md) | 零成本技術棧重構 | ✅ 採用 |
 | [ADR-006](docs/decisions/006-hybrid-rag-mode.md) | RAG 混合模式（嚴格引用 / 通用知識）| ✅ 採用 |
 | [ADR-007](docs/decisions/007-knowledge-graph-keywords.md) | 知識圖譜混合關鍵字 + 共現網絡 | ✅ 採用 |
+| [ADR-008](docs/decisions/008-recursive-chunking.md) | 遞迴語意邊界切塊（中英標點）| ✅ 採用 |
 
 ---
 

@@ -1,4 +1,5 @@
 import asyncio
+from collections import Counter
 from itertools import combinations
 
 from fastapi import APIRouter, Depends
@@ -63,7 +64,7 @@ async def get_graph(
                 pass
 
     kw_nodes: dict[str, dict] = {}
-    cooccur: set[tuple[str, str]] = set()
+    cooccur: Counter = Counter()
     for doc_id, kws in doc_keywords.items():
         uniq = list(dict.fromkeys(kws))  # 文件內去重、保序
         for kw in uniq:
@@ -71,12 +72,12 @@ async def get_graph(
             if kw_id not in kw_nodes:
                 kw_nodes[kw_id] = {"id": kw_id, "label": kw, "type": "keyword", "meta": {}}
             links.append({"source": doc_id, "target": kw_id, "kind": "doc"})
-        # 共現邊：同文件內關鍵字兩兩相連 → 圖譜從星狀變概念網絡
+        # 共現邊：同文件內關鍵字兩兩相連，權重 = 跨文件共現次數（關聯強度）
         for a, b in combinations(uniq, 2):
-            cooccur.add(tuple(sorted((f"kw_{a}", f"kw_{b}"))))
+            cooccur[tuple(sorted((f"kw_{a}", f"kw_{b}")))] += 1
 
-    for a, b in cooccur:
-        links.append({"source": a, "target": b, "kind": "cooccur"})
+    for (a, b), weight in cooccur.items():
+        links.append({"source": a, "target": b, "kind": "cooccur", "weight": weight})
 
     nodes.extend(kw_nodes.values())
     return {"nodes": nodes, "links": links}

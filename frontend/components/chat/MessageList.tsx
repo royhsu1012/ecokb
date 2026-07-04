@@ -77,6 +77,21 @@ export function MessageList({ conversation, thinking, onSuggestion, endRef }: Pr
                   msg.role === "assistant" ? renderContent(msg.content) : msg.content
                 )}
               </div>
+              {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
+                <div style={{ maxWidth: "84%", marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>引用來源（相關度）</span>
+                  {msg.sources.map(src => (
+                    <div key={src.index} title={src.content}
+                      style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--text-2)" }}>
+                      <span style={{ color: "var(--accent)", fontWeight: 600, flexShrink: 0 }}>來源 {src.index}</span>
+                      <span style={{ flex: 1, height: 4, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                        <span style={{ display: "block", height: "100%", width: `${src.score}%`, background: "var(--accent)" }} />
+                      </span>
+                      <span style={{ flexShrink: 0, color: "var(--muted)" }}>{src.score}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {msg.role === "assistant" && msg.content && (
                 <button onClick={() => navigator.clipboard.writeText(msg.content)}
                   style={{ fontSize: 11, color: "var(--faint)", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", marginTop: 2 }}

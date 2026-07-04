@@ -26,7 +26,11 @@ async def _save_messages(sb: AsyncClient, conversation_id: str, question: str, a
 
 
 def _sources_of(chunks: list[dict]) -> list[dict]:
-    return [{"index": i + 1, "content": c["content"][:200]} for i, c in enumerate(chunks)]
+    # score：cosine 相似度轉百分比（查詢↔段落的關聯強度），前端顯示可信度
+    return [
+        {"index": i + 1, "content": c["content"][:200], "score": round(c.get("similarity", 0) * 100)}
+        for i, c in enumerate(chunks)
+    ]
 
 
 @router.post("/ask")

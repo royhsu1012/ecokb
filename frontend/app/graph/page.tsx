@@ -71,8 +71,9 @@ export default function GraphPage() {
       const link = g.append("g").selectAll("line")
         .data(filteredLinks).join("line")
         .style("stroke", (d: any) => d.kind === "cooccur" ? NODE_COLORS.keyword : "var(--border-strong)")
-        .attr("stroke-width", (d: any) => d.kind === "cooccur" ? 0.7 : 1.5)
-        .attr("stroke-opacity", (d: any) => d.kind === "cooccur" ? 0.4 : 0.85)
+        // 共現邊粗細/深淺隨權重（跨文件共現次數 = 關聯強度）遞增
+        .attr("stroke-width", (d: any) => d.kind === "cooccur" ? Math.min(0.6 + (d.weight || 1) * 0.6, 3) : 1.5)
+        .attr("stroke-opacity", (d: any) => d.kind === "cooccur" ? Math.min(0.3 + (d.weight || 1) * 0.15, 0.8) : 0.85)
         .attr("stroke-dasharray", (d: any) => d.kind === "cooccur" ? "3,3" : null);
 
       const node = (g.append("g").selectAll("g")

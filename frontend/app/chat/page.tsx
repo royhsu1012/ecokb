@@ -102,6 +102,14 @@ export default function ChatPage() {
     ));
   }
 
+  function setLastMessageSources(convId: string, sources: import("@/lib/types").Source[]) {
+    setConversations(prev => prev.map(c =>
+      c.id === convId
+        ? { ...c, messages: c.messages.map((m, i) => i === c.messages.length - 1 ? { ...m, sources } : m) }
+        : c
+    ));
+  }
+
   async function sendMessage() {
     if (!input.trim() || thinking) return;
     const question = input.trim();
@@ -158,7 +166,7 @@ export default function ChatPage() {
       await api.chat.ask(kbId, question, (chunk) => {
         answer += chunk;
         appendToLastMessage(convId!, answer);
-      }, convId);
+      }, convId, (sources) => setLastMessageSources(convId!, sources));
       // 串流結束但完全沒有內容（如 200 卻無 chunk）→ 給提示，避免留下永久空白氣泡
       if (answer === "") appendToLastMessage(convId!, "（沒有收到回應，請重試）");
     } catch (e: any) {

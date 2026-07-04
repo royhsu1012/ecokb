@@ -1,4 +1,4 @@
-import type { Document, Message, GraphNode, GraphLink } from "./types";
+import type { Document, Message, GraphNode, GraphLink, Source } from "./types";
 import { clearSession } from "./auth";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -87,7 +87,7 @@ export const api = {
       question: string,
       onChunk: (text: string) => void,
       conversation_id?: string,
-      onSources?: (sources: { index: number; content: string }[]) => void,
+      onSources?: (sources: Source[]) => void,
     ) => {
       const token = localStorage.getItem("access_token");
       const res = await fetch(`${BASE}/chat/ask`, {

@@ -7,9 +7,16 @@ export interface Document {
   created_at: string;
 }
 
+export interface Source {
+  index: number;
+  content: string;
+  score: number; // 相關度百分比（cosine 相似度）
+}
+
 export interface Message {
   role: "user" | "assistant";
   content: string;
+  sources?: Source[];
 }
 
 export interface Conversation {
@@ -32,4 +39,5 @@ export interface GraphLink {
   source: string;
   target: string;
   kind?: "doc" | "cooccur"; // doc→關鍵字 或 關鍵字共現
+  weight?: number; // 共現邊：跨文件共現次數（關聯強度）
 }

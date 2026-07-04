@@ -31,4 +31,5 @@ export interface GraphNode {
 export interface GraphLink {
   source: string;
   target: string;
+  kind?: "doc" | "cooccur"; // doc→關鍵字 或 關鍵字共現
 }

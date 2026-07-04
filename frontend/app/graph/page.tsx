@@ -70,7 +70,10 @@ export default function GraphPage() {
 
       const link = g.append("g").selectAll("line")
         .data(filteredLinks).join("line")
-        .style("stroke", "var(--border-strong)").attr("stroke-width", 1.5);
+        .style("stroke", (d: any) => d.kind === "cooccur" ? NODE_COLORS.keyword : "var(--border-strong)")
+        .attr("stroke-width", (d: any) => d.kind === "cooccur" ? 0.7 : 1.5)
+        .attr("stroke-opacity", (d: any) => d.kind === "cooccur" ? 0.4 : 0.85)
+        .attr("stroke-dasharray", (d: any) => d.kind === "cooccur" ? "3,3" : null);
 
       const node = (g.append("g").selectAll("g")
         .data(filtered).join("g") as d3.Selection<SVGGElement, any, SVGGElement, unknown>)

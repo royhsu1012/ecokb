@@ -1,4 +1,5 @@
 import asyncio
+from itertools import combinations
 
 from fastapi import APIRouter, Depends
 from supabase._async.client import AsyncClient
@@ -56,12 +57,20 @@ async def get_graph(
         doc_keywords.update(await asyncio.to_thread(_fallback))
 
     kw_nodes: dict[str, dict] = {}
+    cooccur: set[tuple[str, str]] = set()
     for doc_id, kws in doc_keywords.items():
-        for kw in kws:
+        uniq = list(dict.fromkeys(kws))  # 文件內去重、保序
+        for kw in uniq:
             kw_id = f"kw_{kw}"
             if kw_id not in kw_nodes:
                 kw_nodes[kw_id] = {"id": kw_id, "label": kw, "type": "keyword", "meta": {}}
-            links.append({"source": doc_id, "target": kw_id})
+            links.append({"source": doc_id, "target": kw_id, "kind": "doc"})
+        # 共現邊：同文件內關鍵字兩兩相連 → 圖譜從星狀變概念網絡
+        for a, b in combinations(uniq, 2):
+            cooccur.add(tuple(sorted((f"kw_{a}", f"kw_{b}"))))
+
+    for a, b in cooccur:
+        links.append({"source": a, "target": b, "kind": "cooccur"})
 
     nodes.extend(kw_nodes.values())
     return {"nodes": nodes, "links": links}

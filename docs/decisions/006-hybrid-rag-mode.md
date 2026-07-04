@@ -42,3 +42,12 @@ date: 2026-07
 **實作**
 - `services/llm.py` 拆出 `GROUNDED_SYSTEM_PROMPT` / `GENERAL_SYSTEM_PROMPT`，共用底層串流
 - `routers/chat.py` 的無資料分支改呼叫 `stream_general` / `complete_general`
+
+## 補充：檢索相關度外露（2026-07）
+
+`match_chunks` 本就回傳每段落的 cosine 相似度（查詢↔段落關聯強度），原本只用於 0.6 門檻後丟棄。
+改為將其轉百分比放進 sources data（`chat.py` `_sources_of` 的 `score`），前端在答案下方以條狀圖顯示
+「引用來源（相關度）」，讓使用者看得到每個 `[來源 N]` 有多貼題、提升可信度透明度。
+
+- 後端即算即回（DB 端 cosine），零額外 API；串流經 `sources` SSE 事件回傳
+- 前端 `Message.sources`（`types.ts`）+ `MessageList` 條狀圖

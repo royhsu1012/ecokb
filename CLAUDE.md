@@ -39,6 +39,7 @@ ecokb/
 │       ├── llm.py         # 串流問答（asyncio queue 橋接、LLMError 錯誤哨兵）
 │       ├── embedding.py   # gemini-embedding-001（768 維，限流 + retry）
 │       ├── ocr.py         # Gemini Vision OCR（限流 + retry）
+│       ├── keywords.py    # 知識圖譜關鍵字混合抽取（Gemini 預設 + jieba 降級）
 │       └── storage.py     # Supabase Storage（key 用 UUID ASCII-safe）
 ├── supabase/schema.sql    # vector(768)，HNSW index
 └── docs/decisions/        # ADR 架構決策文件
@@ -130,6 +131,12 @@ cd frontend && npm run build
 - 切換依據是相似度門檻 `SIMILARITY_THRESHOLD = 0.6`（`services/rag.py`），**不是** 檢索筆數（`match_chunks` 永遠回傳 top-k）
 - `services/llm.py` 拆 `GROUNDED_SYSTEM_PROMPT` / `GENERAL_SYSTEM_PROMPT` 兩種提示，共用底層 `_stream` / `_complete`
 - 調整引用鬆緊只需改 `SIMILARITY_THRESHOLD`
+
+## 知識圖譜關鍵字（ADR-007）
+- 混合抽取（`services/keywords.py`）：RPM 充裕走 Gemini（`try_acquire(min_reserve=3)` 保留額度給問答/OCR），吃緊或失敗降級 jieba
+- 上傳時抽一次存 `documents.keywords`（jsonb），與 ready 狀態解耦 best-effort；圖譜端讀取、舊文件 jieba 即時補
+- 圖譜 link 帶 `kind`：`doc`（文件→關鍵字，實線）/ `cooccur`（同文件關鍵字共現，前端淡虛線）→ 星狀變概念網絡
+- Gemini `gemini-2.5-flash` 免費層為**每日 20 次**，問答/OCR/關鍵字共用
 
 ## 安全與韌性規範
 - 帶 `conversation_id` 的請求一律經 `require_conversation_ownership`（驗證屬於該使用者且屬該 KB），防跨對話寫入

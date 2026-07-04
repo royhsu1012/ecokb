@@ -189,6 +189,7 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 - `ThemeToggle` 寫入 `localStorage.theme`；`layout.tsx` 內嵌 script 在 hydration 前套用主題防閃爍（FOUC）
 - 對話頁拆分為 `ChatSidebar` / `MessageList` / `ChatInput`，狀態集中於 page
 - 頁面：`/` 登入 · `/chat` 對話 · `/admin` 管理後台 · `/graph` 知識圖譜（D3.js）
+- 知識圖譜：關鍵字混合抽取（Gemini 語意優先、額度盡降級 jieba），關鍵字共現邊形成概念網絡（見 [ADR-007](docs/decisions/007-knowledge-graph-keywords.md)）
 
 ---
 
@@ -224,6 +225,7 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 | [ADR-004](docs/decisions/004-google-drive-storage.md) | 檔案儲存（Google Drive）| ⚠️ 棄用 |
 | [ADR-005](docs/decisions/005-zero-cost-stack.md) | 零成本技術棧重構 | ✅ 採用 |
 | [ADR-006](docs/decisions/006-hybrid-rag-mode.md) | RAG 混合模式（嚴格引用 / 通用知識）| ✅ 採用 |
+| [ADR-007](docs/decisions/007-knowledge-graph-keywords.md) | 知識圖譜混合關鍵字 + 共現網絡 | ✅ 採用 |
 
 ---
 

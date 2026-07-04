@@ -191,7 +191,7 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 - 元件內一律用 `var(--*)` 語意變數，禁止 hardcode 色碼
 - `ThemeToggle` 寫入 `localStorage.theme`；`layout.tsx` 內嵌 script 在 hydration 前套用主題防閃爍（FOUC）
 - 對話頁拆分為 `ChatSidebar` / `MessageList` / `ChatInput`，狀態集中於 page
-- 頁面：`/` 登入 · `/chat` 對話 · `/admin` 管理後台 · `/graph` 知識圖譜（D3.js）
+- 頁面：`/` 登入 · `/chat` 對話 · `/admin` 管理後台 · `/graph` 知識圖譜（D3.js） · `/members` 會員管理（僅管理員可見）
 - 知識圖譜（見 [ADR-007](docs/decisions/007-knowledge-graph-keywords.md)）：
   - 關鍵字混合抽取（Gemini 語意優先、額度盡降級 jieba），一律正規化為**繁體中文**（英文概念翻譯）→ 跨語言文件透過同概念節點橋接
   - 關鍵字**共現邊**形成概念網絡，邊權重 = 跨文件共現次數（關聯強度），前端粗細/深淺呈現
@@ -214,7 +214,7 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 ## 可觀測性
 
 - `GET /health` 健康檢查端點（不依賴 DB，供部署平台探活）
-- `GET/DELETE /admin/members[/{id}]` 會員管理（`require_admin` 守衛，非管理員 403）
+- `GET/DELETE /admin/members[/{id}]` 會員管理（`require_admin` 守衛，非管理員 403）；`auth.admin.*` 走獨立 `get_admin_client()` 避 session 污染（見 [ADR-009](docs/decisions/009-member-admin-system.md)）
 - 文件處理狀態機落地於 `documents.status`，前端可即時輪詢
 - 後端例外統一由 FastAPI 例外處理轉為結構化錯誤回應
 - 前端 401 統一走 `handleUnauthorized()` 自動清除 session 並跳轉
@@ -250,7 +250,8 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 | `routers/` | HTTP 流程（驗證、參數、回應）| 不自帶 Pydantic schema |
 | `services/` | 業務邏輯（LLM、embedding、儲存、解析、RAG）| Gemini 設定只在 `gemini.py` |
 | `schemas.py` | 請求模型集中管理 | — |
-| `dependencies.py` | 認證與授權 | `user_id` 一律取自 JWT，KB 存取走 `require_kb_ownership` |
+| `dependencies.py` | 認證與授權 | `user_id` 一律取自 JWT，KB 存取走 `require_kb_ownership`，管理端點走 `require_admin` |
+| `services/supabase_client.py` | Supabase 連線 | 一般走 `get_supabase()`；`auth.admin.*` 一律走 `get_admin_client()`（避 session 污染）|
 
 前端對應規範：元件一律用 `var(--*)` 語意變數（禁 hardcode 色碼）、401 統一走 `handleUnauthorized()`、型別用 `lib/types.ts`（禁 `any[]`）。
 

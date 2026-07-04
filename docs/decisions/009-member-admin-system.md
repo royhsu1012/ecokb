@@ -32,6 +32,20 @@ date: 2026-07
 ——DB 靠 `on delete cascade`（`references auth.users on delete cascade`）連動清除
 knowledge_bases → documents → chunks、conversations → messages。
 
+### 獨立 admin client（session 污染修正）
+
+**問題**：`sb.auth.sign_up()` / `sign_in_with_password()` 會把共用 singleton service-key
+client 的 session 設成「剛登入/註冊的那個一般使用者」。之後在同一個 client 上呼叫
+`auth.admin.*` 時，gotrue 改用該使用者的 access_token（而非 service key）送出 →
+`403 User not allowed`。症狀：管理員註冊時 `update_user_by_id` 靜默失敗（try/except 吞掉），
+`is_admin` 從未寫進 `app_metadata`；`/admin/*` 端點也會隨最近一次登入而不穩定。
+
+**修正**：新增 `get_admin_client()`（`services/supabase_client.py`）—— 一個**從不登入**的
+獨立 service-key client，session 永遠空，一律以 service key 執行。所有 `auth.admin.*`
+（register 設 metadata、`list_members`、`delete_member`）全改走它，與 `sign_up`/`sign_in`
+的 session 污染徹底隔離。DB / Storage / `get_user(jwt)` 不受 session 影響（走 apikey header
+或顯式 jwt），維持用 `get_supabase()`。
+
 ### 前端
 
 - `/members` 會員管理頁，沿用管理後台的 topbar/卡片/`del-btn`/confirm 設計系統
@@ -48,6 +62,7 @@ knowledge_bases → documents → chunks、conversations → messages。
 **安全**
 - 前端隱藏入口僅為 UX，真正的守衛在後端 `require_admin`（前端可繞過、後端不可）
 - app_metadata 由伺服器控制，使用者無法自行提權
+- `auth.admin.*` 一律走獨立 `get_admin_client()`，不受 `sign_up`/`sign_in` 的 session 污染影響（見上）
 
 **限制 / 待辦**
 - admin_key 仍公開（展示用）；正式化應改 email 白名單

@@ -36,6 +36,7 @@ ecokb/
 │   │   ├── graph.py
 │   │   └── admin.py       # 會員管理（require_admin，列/刪會員）
 │   └── services/
+│       ├── supabase_client.py # get_supabase（一般）+ get_admin_client（auth.admin.* 專用，避 session 污染）
 │       ├── gemini.py      # Gemini 統一設定層（模型常數、get_client）
 │       ├── rate_limit.py  # token bucket 限流 + 429 retry（15 RPM 韌性）
 │       ├── llm.py         # 串流問答（asyncio queue 橋接、LLMError 錯誤哨兵）
@@ -119,6 +120,7 @@ cd frontend && npm run build
 - KB 擁有權檢查一律用 `await require_kb_ownership(sb, kb_id, user_id)`（`dependencies.py`），**不要** 在 router 內重寫查詢
 - 管理員身份存 Supabase `app_metadata.is_admin`（伺服器控制、使用者改不了）；`is_admin` 由 `get_current_user` 讀取
 - 管理端點（`routers/admin.py`）一律注入 `Depends(require_admin)`（非 admin → 403）；前端隱藏入口僅 UX，真守衛在後端（ADR-009）
+- **`auth.admin.*`（建立/列出/刪除/改 metadata）一律用 `get_admin_client()`（`services/supabase_client.py`），不要用 `get_supabase()`**：`sign_up`/`sign_in` 會把共用 client 的 session 設成該使用者，之後 `auth.admin.*` 改用使用者 token → `403 User not allowed`。`get_admin_client()` 從不登入、session 永遠空，一律以 service key 執行（ADR-009）
 
 ## 後端分層規範
 - Pydantic 請求模型放 `backend/schemas.py`，**不要** 定義在 router 檔案內

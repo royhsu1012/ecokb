@@ -19,7 +19,9 @@ date: 2026-07
 - 登入回傳 `is_admin`；`get_current_user` 由 token 的 app_metadata 讀取
 - `require_admin` 依賴：非管理員存取 `/admin/*` 一律 403
 
-> 註：目前 `admin_key` 仍寫在公開 README（互動展示用）。正式上線前應改為 email 白名單或更換金鑰。
+> 註：`admin_key`（`EconKB-Admin-2026`）**刻意**寫在公開 README。本專案定位為教學／互動展示，
+> 讓讀者能自行註冊管理員、體驗會員管理流程；金鑰公開是設計選擇，非待修的技術債。
+> 若日後改為正式服務，再收斂為 email 白名單或環境變數金鑰即可。
 
 ### 管理端點（`routers/admin.py`）
 
@@ -65,5 +67,5 @@ client 的 session 設成「剛登入/註冊的那個一般使用者」。之後
 - `auth.admin.*` 一律走獨立 `get_admin_client()`，不受 `sign_up`/`sign_in` 的 session 污染影響（見上）
 
 **限制 / 待辦**
-- admin_key 仍公開（展示用）；正式化應改 email 白名單
+- admin_key 刻意公開（教學／展示用，非技術債）；若轉正式服務再改 email 白名單或環境變數金鑰
 - 目前為硬刪；如需可加軟刪 / 稽核記錄

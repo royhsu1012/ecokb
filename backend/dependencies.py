@@ -18,7 +18,18 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
     if not res.user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
-    return {"user_id": res.user.id, "email": res.user.email}
+    return {
+        "user_id": res.user.id,
+        "email": res.user.email,
+        "is_admin": bool((res.user.app_metadata or {}).get("is_admin")),
+    }
+
+
+def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    """管理員守衛：非 admin 一律 403。"""
+    if not current_user.get("is_admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
+    return current_user
 
 
 async def require_kb_ownership(sb: AsyncClient, kb_id: str, user_id: str) -> None:

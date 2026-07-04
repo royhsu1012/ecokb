@@ -29,6 +29,13 @@ async def register(req: RegisterRequest, sb: AsyncClient = Depends(get_supabase)
     if not user:
         raise HTTPException(status_code=400, detail="註冊失敗，請稍後再試")
 
+    # 管理員身份存進 app_metadata（伺服器控制、使用者無法竄改）
+    if is_admin:
+        try:
+            await sb.auth.admin.update_user_by_id(user.id, {"app_metadata": {"is_admin": True}})
+        except Exception as e:  # noqa: BLE001
+            print(f"[auth] set admin metadata failed: {e}")
+
     # Create default knowledge base
     await sb.table("knowledge_bases").insert({
         "user_id": user.id,
@@ -54,6 +61,7 @@ async def login(req: LoginRequest, sb: AsyncClient = Depends(get_supabase)):
         "refresh_token": session.refresh_token,
         "user_id": res.user.id,
         "email": res.user.email,
+        "is_admin": bool((res.user.app_metadata or {}).get("is_admin")),
     }
 
 

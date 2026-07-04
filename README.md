@@ -214,6 +214,7 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 ## 可觀測性
 
 - `GET /health` 健康檢查端點（不依賴 DB，供部署平台探活）
+- `GET/DELETE /admin/members[/{id}]` 會員管理（`require_admin` 守衛，非管理員 403）
 - 文件處理狀態機落地於 `documents.status`，前端可即時輪詢
 - 後端例外統一由 FastAPI 例外處理轉為結構化錯誤回應
 - 前端 401 統一走 `handleUnauthorized()` 自動清除 session 並跳轉
@@ -232,6 +233,7 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 | [ADR-006](docs/decisions/006-hybrid-rag-mode.md) | RAG 混合模式（嚴格引用 / 通用知識）| ✅ 採用 |
 | [ADR-007](docs/decisions/007-knowledge-graph-keywords.md) | 知識圖譜混合關鍵字 + 共現網絡 | ✅ 採用 |
 | [ADR-008](docs/decisions/008-recursive-chunking.md) | 遞迴語意邊界切塊（中英標點）| ✅ 採用 |
+| [ADR-009](docs/decisions/009-member-admin-system.md) | 會員與管理系統（admin 刪會員）| ✅ 採用 |
 
 ---
 

@@ -25,6 +25,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDemo = useRef(false);
+  const isAdmin = useRef(false);
 
   const activeConv = conversations.find(c => c.id === activeId) || null;
 
@@ -32,6 +33,7 @@ export default function ChatPage() {
     const s = getSession();
     if (!s) { router.push("/"); return; }
     isDemo.current = s.token === "demo-token";
+    isAdmin.current = s.isAdmin;
     setSession({ userId: s.userId, email: s.email });
     const kb = localStorage.getItem("kb_id") || "";
     setKbId(kb);
@@ -208,6 +210,11 @@ export default function ChatPage() {
             <button onClick={() => router.push("/admin")} className="btn-ghost" style={{ fontSize: 12 }}>
               管理後台
             </button>
+            {isAdmin.current && (
+              <button onClick={() => router.push("/members")} className="btn-ghost" style={{ fontSize: 12 }}>
+                會員管理
+              </button>
+            )}
             <ThemeToggle />
           </div>
         </div>

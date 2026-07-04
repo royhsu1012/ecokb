@@ -28,12 +28,13 @@ ecokb/
 │   ├── config.py          # 環境變數（GOOGLE_API_KEY, SUPABASE_*）
 │   ├── constants.py       # 可調參數集中處（門檻/上限/RPM，調校單一入口）
 │   ├── schemas.py         # 所有 Pydantic 請求模型（router 不自帶 schema）
-│   ├── dependencies.py    # get_current_user JWT 驗證、require_kb_ownership
+│   ├── dependencies.py    # get_current_user JWT 驗證、require_kb_ownership、require_admin
 │   ├── routers/
 │   │   ├── auth.py
 │   │   ├── chat.py        # SSE 串流回答（Gemini）
 │   │   ├── documents.py   # 文件上傳、向量化
-│   │   └── graph.py
+│   │   ├── graph.py
+│   │   └── admin.py       # 會員管理（require_admin，列/刪會員）
 │   └── services/
 │       ├── gemini.py      # Gemini 統一設定層（模型常數、get_client）
 │       ├── rate_limit.py  # token bucket 限流 + 429 retry（15 RPM 韌性）
@@ -116,6 +117,8 @@ cd frontend && npm run build
 - `get_current_user` 在 `backend/dependencies.py`，透過 Supabase `auth.get_user(token)` 驗證 Bearer JWT
 - `user_id` 一律從 JWT 取得，**不接受** 從 form/body 傳入
 - KB 擁有權檢查一律用 `await require_kb_ownership(sb, kb_id, user_id)`（`dependencies.py`），**不要** 在 router 內重寫查詢
+- 管理員身份存 Supabase `app_metadata.is_admin`（伺服器控制、使用者改不了）；`is_admin` 由 `get_current_user` 讀取
+- 管理端點（`routers/admin.py`）一律注入 `Depends(require_admin)`（非 admin → 403）；前端隱藏入口僅 UX，真守衛在後端（ADR-009）
 
 ## 後端分層規範
 - Pydantic 請求模型放 `backend/schemas.py`，**不要** 定義在 router 檔案內

@@ -21,6 +21,12 @@ def test_protected_routes_require_auth(client_unauthenticated):
         assert res.status_code in (401, 403), f"{method} {path} returned {res.status_code}"
 
 
+def test_admin_endpoints_block_non_admin(client):
+    """非管理員存取 /admin/* 一律 403（TEST_USER 無 is_admin）。"""
+    assert client.get("/admin/members").status_code == 403
+    assert client.delete("/admin/members/some-user-id").status_code == 403
+
+
 def test_ask_rejects_foreign_kb(client, mock_sb):
     """問答時 KB 不屬於使用者 → 403。"""
     mock_sb._chain.execute.return_value = make_query_result([])  # KB 查無 → 拒絕

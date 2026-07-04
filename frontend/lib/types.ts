@@ -26,6 +26,13 @@ export interface Conversation {
   loaded?: boolean; // server 對話的訊息是否已載入
 }
 
+export interface Member {
+  id: string;
+  email: string;
+  created_at: string | null;
+  is_admin: boolean;
+}
+
 export type GraphNodeType = "document" | "keyword" | "topic";
 
 export interface GraphNode {

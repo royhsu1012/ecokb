@@ -32,7 +32,7 @@ export default function LoginPage() {
         return;
       }
       const res = await api.auth.login(email, password);
-      saveSession(res.access_token, res.user_id, res.email);
+      saveSession(res.access_token, res.user_id, res.email, res.is_admin);
       const kbs = await api.kb.list(res.user_id);
       if (kbs.length > 0) localStorage.setItem("kb_id", kbs[0].id);
       router.push("/chat");

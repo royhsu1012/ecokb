@@ -1,4 +1,4 @@
-import type { Document, Message, GraphNode, GraphLink, Source } from "./types";
+import type { Document, Message, GraphNode, GraphLink, Source, Member } from "./types";
 import { clearSession } from "./auth";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -32,7 +32,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   auth: {
     login: (email: string, password: string) =>
-      request<{ access_token: string; user_id: string; email: string }>("/auth/login", {
+      request<{ access_token: string; user_id: string; email: string; is_admin: boolean }>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }),
@@ -41,6 +41,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ email, password, admin_key: admin_key || "" }),
       }),
+  },
+  admin: {
+    members: () => request<Member[]>("/admin/members"),
+    deleteMember: (id: string) => request(`/admin/members/${id}`, { method: "DELETE" }),
   },
   kb: {
     list: (user_id: string) => request<KnowledgeBase[]>(`/chat/kb/${user_id}`),

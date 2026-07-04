@@ -129,14 +129,17 @@ cd frontend && npm run build
 
 ## RAG 混合模式（ADR-006）
 - 有相關資料 → 嚴格引用標 `[來源 N]`；無相關資料 → AI 通用知識回答並加前綴 `GENERAL_DISCLAIMER`
-- 切換依據是相似度門檻 `SIMILARITY_THRESHOLD = 0.6`（`services/rag.py`），**不是** 檢索筆數（`match_chunks` 永遠回傳 top-k）
+- 切換依據是相似度門檻 `SIMILARITY_THRESHOLD = 0.6`（`constants.py`），**不是** 檢索筆數（`match_chunks` 永遠回傳 top-k）
+- sources 帶 `score`（cosine 相似度轉 %），前端 `MessageList` 以條狀圖顯示引用相關度
 - `services/llm.py` 拆 `GROUNDED_SYSTEM_PROMPT` / `GENERAL_SYSTEM_PROMPT` 兩種提示，共用底層 `_stream` / `_complete`
 - 調整引用鬆緊只需改 `SIMILARITY_THRESHOLD`
 
 ## 知識圖譜關鍵字（ADR-007）
 - 混合抽取（`services/keywords.py`）：RPM 充裕走 Gemini（`try_acquire(min_reserve=3)` 保留額度給問答/OCR），吃緊或失敗降級 jieba
 - 上傳時抽一次存 `documents.keywords`（jsonb），與 ready 狀態解耦 best-effort；圖譜端讀取、舊文件 jieba 即時補
+- 關鍵字一律正規化為**繁體中文**（Gemini prompt 要求全繁中+標準術語；jieba 靠 `_EN_ZH` 對照表翻常見英文詞）→ 跨語言文件透過同概念節點橋接
 - 圖譜 link 帶 `kind`：`doc`（文件→關鍵字，實線）/ `cooccur`（同文件關鍵字共現，前端淡虛線）→ 星狀變概念網絡
+- 共現邊帶 `weight`（跨文件共現次數=關聯強度），前端粗細/深淺隨權重遞增
 - Gemini `gemini-2.5-flash` 免費層為**每日 20 次**，問答/OCR/關鍵字共用
 
 ## 安全與韌性規範

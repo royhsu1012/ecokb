@@ -181,6 +181,8 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 
 門檻 `SIMILARITY_THRESHOLD` 定義於 `backend/services/rag.py`，可調整引用鬆緊。詳見 [ADR-006](docs/decisions/006-hybrid-rag-mode.md)。
 
+每個引用來源帶 **cosine 相關度**（`score` %），前端於答案下方以條狀圖顯示「引用來源（相關度）」，可信度透明。
+
 ---
 
 ## 前端設計系統
@@ -190,7 +192,9 @@ Supabase Storage 的 object key 不接受非 ASCII 字元（中文檔名 `央行
 - `ThemeToggle` 寫入 `localStorage.theme`；`layout.tsx` 內嵌 script 在 hydration 前套用主題防閃爍（FOUC）
 - 對話頁拆分為 `ChatSidebar` / `MessageList` / `ChatInput`，狀態集中於 page
 - 頁面：`/` 登入 · `/chat` 對話 · `/admin` 管理後台 · `/graph` 知識圖譜（D3.js）
-- 知識圖譜：關鍵字混合抽取（Gemini 語意優先、額度盡降級 jieba），關鍵字共現邊形成概念網絡（見 [ADR-007](docs/decisions/007-knowledge-graph-keywords.md)）
+- 知識圖譜（見 [ADR-007](docs/decisions/007-knowledge-graph-keywords.md)）：
+  - 關鍵字混合抽取（Gemini 語意優先、額度盡降級 jieba），一律正規化為**繁體中文**（英文概念翻譯）→ 跨語言文件透過同概念節點橋接
+  - 關鍵字**共現邊**形成概念網絡，邊權重 = 跨文件共現次數（關聯強度），前端粗細/深淺呈現
 
 ---
 

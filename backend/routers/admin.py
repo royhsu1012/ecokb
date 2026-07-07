@@ -7,6 +7,8 @@ from dependencies import require_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+PER_PAGE = 100  # list_users 每頁筆數（翻頁抓齊所有會員）
+
 
 @router.get("/members")
 async def list_members(
@@ -14,8 +16,18 @@ async def list_members(
 ):
     """列出所有會員（管理員限定）。"""
     admin_sb = await get_admin_client()
-    res = await admin_sb.auth.admin.list_users()
-    users = res if isinstance(res, list) else getattr(res, "users", [])
+    # list_users 預設每頁 50 筆，須迴圈翻頁抓齊，否則會員超過 50 位時前端只看得到前 50
+    users = []
+    page = 1
+    while True:
+        res = await admin_sb.auth.admin.list_users(page=page, per_page=PER_PAGE)
+        batch = res if isinstance(res, list) else getattr(res, "users", [])
+        if not batch:
+            break
+        users.extend(batch)
+        if len(batch) < PER_PAGE:
+            break
+        page += 1
     return [
         {
             "id": u.id,

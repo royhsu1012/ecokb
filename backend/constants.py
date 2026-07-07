@@ -14,6 +14,9 @@ KEYWORD_RPM_RESERVE = 3.0      # 關鍵字抽取保留給問答/OCR 的 Gemini R
 GEMINI_RPM = 14                # 每模型每分鐘請求上限（免費層 ~15，留 1 緩衝）
 EMBED_CONCURRENCY = 8          # embedding 並發上限
 
+# --- 問答輸入 ---
+MAX_QUESTION_CHARS = 4000      # 單則提問字元上限（防超長輸入放大 embedding 呼叫/記憶體）
+
 # --- 文件處理 ---
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024   # 上傳大小上限（50MB）
 CHUNK_SIZE = 400               # 切塊字元數

@@ -28,6 +28,7 @@
   --danger: #e5484d;
   --danger-soft: rgba(229, 72, 77, 0.12);
   --success: #2eb88a;
+  --success-soft: rgba(46, 184, 138, 0.12);
   --info: #5b9dd9;
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.25);
@@ -52,6 +53,7 @@ html[data-theme="light"] {
   --danger: #d13438;
   --danger-soft: rgba(209, 52, 56, 0.08);
   --success: #1e9e6f;
+  --success-soft: rgba(30, 158, 111, 0.10);
   --info: #3b82c4;
   --shadow: 0 4px 24px rgba(61, 57, 41, 0.08);
   --shadow-sm: 0 1px 4px rgba(61, 57, 41, 0.06);

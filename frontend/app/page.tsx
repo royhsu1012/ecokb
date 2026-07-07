@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [adminKey, setAdminKey] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
 
   function enterDemo() {
@@ -24,11 +25,16 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setNotice("");
     setLoading(true);
     try {
       if (isRegister) {
         await api.auth.register(email, password, adminKey);
+        // 註冊不自動登入：回饋成功並切回登入表單，保留 email、清空密碼
         setIsRegister(false);
+        setPassword("");
+        setAdminKey("");
+        setNotice("註冊成功，請使用剛才的帳號登入。");
         return;
       }
       const res = await api.auth.login(email, password);
@@ -92,6 +98,11 @@ export default function LoginPage() {
                   placeholder="管理員專用金鑰" />
               </div>
             )}
+            {notice && (
+              <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--success-soft)", border: "1px solid var(--success)", color: "var(--success)", fontSize: 13 }}>
+                {notice}
+              </div>
+            )}
             {error && (
               <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--danger-soft)", border: "1px solid var(--danger)", color: "var(--danger)", fontSize: 13 }}>
                 {error}
@@ -112,7 +123,7 @@ export default function LoginPage() {
 
           <p style={{ marginTop: 16, textAlign: "center", fontSize: 13, color: "var(--muted)" }}>
             {isRegister ? "已有帳號？" : "還沒有帳號？"}
-            <button onClick={() => { setIsRegister(!isRegister); setError(""); }}
+            <button onClick={() => { setIsRegister(!isRegister); setError(""); setNotice(""); }}
               style={{ marginLeft: 4, color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}>
               {isRegister ? "登入" : "免費註冊"}
             </button>

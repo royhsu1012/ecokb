@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Member } from "@/lib/types";
 
 export default function MembersPage() {
@@ -12,6 +13,9 @@ export default function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pending, setPending] = useState<Member | null>(null);  // 待確認刪除的會員
+  const [deleting, setDeleting] = useState(false);
+  const [delError, setDelError] = useState("");
   const selfId = useRef("");
 
   useEffect(() => {
@@ -33,13 +37,18 @@ export default function MembersPage() {
     }
   }
 
-  async function deleteMember(m: Member) {
-    if (!confirm(`確定刪除會員「${m.email}」及其所有資料？此操作無法復原。`)) return;
+  async function confirmDelete() {
+    if (!pending) return;
+    setDeleting(true);
+    setDelError("");
     try {
-      await api.admin.deleteMember(m.id);
-      setMembers(prev => prev.filter(x => x.id !== m.id));
+      await api.admin.deleteMember(pending.id);
+      setMembers(prev => prev.filter(x => x.id !== pending.id));
+      setPending(null);
     } catch (e: any) {
-      alert(e.message || "刪除失敗");
+      setDelError(e.message || "刪除失敗");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -97,7 +106,7 @@ export default function MembersPage() {
                       <span style={{ fontSize: 11, color: "var(--accent)", padding: "3px 10px", borderRadius: 6, fontWeight: 600, background: "var(--accent-soft)", border: "1px solid var(--accent-border)", flexShrink: 0 }}>管理員</span>
                     )}
                     {!isSelf && (
-                      <button className="del-btn" onClick={() => deleteMember(m)} style={{ flexShrink: 0 }} title="刪除會員">×</button>
+                      <button className="del-btn" onClick={() => { setDelError(""); setPending(m); }} style={{ flexShrink: 0 }} title="刪除會員">×</button>
                     )}
                   </div>
                 );
@@ -106,6 +115,18 @@ export default function MembersPage() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!pending}
+        danger
+        title="刪除會員"
+        message={pending ? `確定刪除會員「${pending.email}」及其所有資料？此操作無法復原。` : ""}
+        confirmText="刪除"
+        loading={deleting}
+        error={delError}
+        onConfirm={confirmDelete}
+        onCancel={() => { if (!deleting) { setPending(null); setDelError(""); } }}
+      />
     </div>
   );
 }

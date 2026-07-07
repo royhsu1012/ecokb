@@ -79,6 +79,7 @@ ecokb/
 - `.theme-toggle` — 日夜切換按鈕
 - `.pulse` — 1.5s 透明度閃爍動畫
 - `.auth-input` — 輸入框，`:focus` 變主色邊框
+- `.chat-sidebar` / `.sidebar-backdrop` / `.sidebar-toggle` — 對話頁側欄 RWD：桌機固定欄，≤768px 收成 off-canvas 抽屜（漢堡鍵 `.sidebar-toggle` 手機才顯示）
 
 ## 編碼規範
 
@@ -98,6 +99,10 @@ ecokb/
 - 使用 `<Logo size={N} showText={boolean} fontSize={N} />`（來自 `components/Logo.tsx`）
 - Topbar 中只顯示圖示：`<Logo showText={false} />`
 - 側邊欄顯示完整：`<Logo />`
+
+### 對話框 / 提示
+- 確認與錯誤**不要** 用瀏覽器原生 `confirm()`／`alert()`，一律用 `<ConfirmDialog>`（`components/ConfirmDialog.tsx`，含 danger/loading/error 狀態）或內嵌訊息帶
+- 破壞性操作（刪除）用 `danger` 樣式確認；失敗訊息塞回 dialog 的 `error` 或頁面內嵌 banner
 
 ### 動畫
 - Pulse 動畫使用 `.pulse` CSS 類別，**不要** 在元件內嵌 `<style>` 標籤

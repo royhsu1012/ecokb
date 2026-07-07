@@ -22,6 +22,7 @@ export default function ChatPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);  // 手機側欄抽屜
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isDemo = useRef(false);
@@ -189,6 +190,8 @@ export default function ChatPage() {
         conversations={conversations}
         activeId={activeId}
         email={session?.email || ""}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         onSelect={selectConversation}
         onNew={newConversation}
         onDelete={deleteConversation}
@@ -199,6 +202,8 @@ export default function ChatPage() {
         {/* Topbar */}
         <div style={{ padding: "10px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--bg)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => setSidebarOpen(true)} className="sidebar-toggle btn-ghost"
+              aria-label="開啟側邊欄" style={{ padding: "4px 9px", fontSize: 15, lineHeight: 1 }}>☰</button>
             <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 500 }}>模型</span>
             <span style={{ fontSize: 13, color: "var(--accent)", fontWeight: 600, padding: "2px 8px", background: "var(--accent-soft)", borderRadius: 6, border: "1px solid var(--accent-border)" }}>gemini-2.5-flash</span>
             {isDemo.current && <span style={{ fontSize: 11, color: "var(--info)", padding: "2px 8px", background: "transparent", borderRadius: 6, border: "1px solid var(--info)", fontWeight: 600 }}>DEMO</span>}

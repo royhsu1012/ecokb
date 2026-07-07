@@ -33,7 +33,7 @@ export interface Member {
   is_admin: boolean;
 }
 
-export type GraphNodeType = "document" | "keyword" | "topic";
+export type GraphNodeType = "document" | "keyword";
 
 export interface GraphNode {
   id: string;

@@ -6,11 +6,11 @@ import { getSession } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-type NodeType = "document" | "keyword" | "topic";
+type NodeType = "document" | "keyword";
 interface GraphNode { id: string; label: string; type: NodeType; meta: Record<string, string>; x?: number; y?: number; vx?: number; vy?: number; }
 interface GraphLink { source: string | GraphNode; target: string | GraphNode; }
 
-const NODE_COLORS: Record<NodeType, string> = { document: "#d97757", topic: "#2eb88a", keyword: "#5b9dd9" };
+const NODE_COLORS: Record<NodeType, string> = { document: "#d97757", keyword: "#5b9dd9" };
 
 export default function GraphPage() {
   const router = useRouter();
@@ -108,7 +108,7 @@ export default function GraphPage() {
 
   const filterBtns: Array<["all" | NodeType, string, string]> = [
     ["all", "全部", "var(--text)"], ["document", "文件", NODE_COLORS.document],
-    ["topic", "主題", NODE_COLORS.topic], ["keyword", "關鍵詞", NODE_COLORS.keyword],
+    ["keyword", "關鍵詞", NODE_COLORS.keyword],
   ];
 
   return (
@@ -161,7 +161,7 @@ export default function GraphPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--muted)", fontSize: 13 }}>類型</span>
-                <span style={{ fontSize: 13, color: NODE_COLORS[selected.type] }}>{selected.type === "document" ? "文件" : selected.type === "topic" ? "主題" : "關鍵詞"}</span>
+                <span style={{ fontSize: 13, color: NODE_COLORS[selected.type] }}>{selected.type === "document" ? "文件" : "關鍵詞"}</span>
               </div>
               {Object.entries(selected.meta).map(([k, v]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between" }}>

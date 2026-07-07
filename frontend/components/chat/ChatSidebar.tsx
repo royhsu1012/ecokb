@@ -6,21 +6,25 @@ interface Props {
   conversations: Conversation[];
   activeId: string | null;
   email: string;
+  open?: boolean;          // 手機抽屜開啟狀態（桌機忽略）
+  onClose?: () => void;    // 手機：導覽後收合抽屜
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
   onLogout: () => void;
 }
 
-export function ChatSidebar({ conversations, activeId, email, onSelect, onNew, onDelete, onLogout }: Props) {
+export function ChatSidebar({ conversations, activeId, email, open, onClose, onSelect, onNew, onDelete, onLogout }: Props) {
   return (
-    <div style={{ width: 256, background: "var(--surface)", borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+    <>
+    <div className={`sidebar-backdrop${open ? " open" : ""}`} onClick={onClose} />
+    <div className={`chat-sidebar${open ? " open" : ""}`}>
       <div style={{ padding: "18px 16px 12px", borderBottom: "1px solid var(--border)" }}>
         <Logo size={30} fontSize={15} />
       </div>
 
       <div style={{ padding: "12px 12px 8px" }}>
-        <button onClick={onNew}
+        <button onClick={() => { onNew(); onClose?.(); }}
           style={{ width: "100%", padding: "9px 12px", borderRadius: 8, background: "var(--accent-soft)", color: "var(--accent)", border: "1px solid var(--accent-border)", cursor: "pointer", fontSize: 13, fontWeight: 600, textAlign: "left", display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 16 }}>+</span> 新對話
         </button>
@@ -31,7 +35,7 @@ export function ChatSidebar({ conversations, activeId, email, onSelect, onNew, o
           <p style={{ color: "var(--faint)", fontSize: 12, textAlign: "center", padding: "20px 8px" }}>尚無對話記錄</p>
         )}
         {conversations.map(c => (
-          <div key={c.id} onClick={() => onSelect(c.id)}
+          <div key={c.id} onClick={() => { onSelect(c.id); onClose?.(); }}
             className={`conv-item${activeId === c.id ? " active" : ""}`}>
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, lineHeight: 1.4 }}>{c.title}</span>
             <button onClick={e => { e.stopPropagation(); onDelete(c.id); }}
@@ -52,5 +56,6 @@ export function ChatSidebar({ conversations, activeId, email, onSelect, onNew, o
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { getSession } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import type { Document } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -39,6 +40,10 @@ export default function AdminPage() {
   const [uploadProgress, setUploadProgress] = useState<string[]>([]);
   const [manualText, setManualText] = useState("");
   const [manualTitle, setManualTitle] = useState("");
+  const [manualError, setManualError] = useState("");
+  const [pendingDoc, setPendingDoc] = useState<Document | null>(null);  // 待確認刪除的文件
+  const [deletingDoc, setDeletingDoc] = useState(false);
+  const [docDelError, setDocDelError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isDemo = useRef(false);
@@ -69,7 +74,7 @@ export default function AdminPage() {
 
   async function uploadFiles(files: FileList | File[]) {
     if (!kbId || !session || isDemo.current) {
-      if (isDemo.current) { alert("Demo 模式下無法真實上傳，後端連接後即可使用。"); return; }
+      if (isDemo.current) { setUploadProgress(["失敗：Demo 模式下無法真實上傳，後端連接後即可使用。"]); }
       return;
     }
     setUploading(true);
@@ -88,16 +93,29 @@ export default function AdminPage() {
     setTimeout(() => setUploadProgress([]), 3000);
   }
 
-  async function deleteDoc(id: string) {
-    if (isDemo.current) { setDocs(prev => prev.filter(d => d.id !== id)); return; }
-    if (!confirm("確定刪除？")) return;
-    await api.documents.delete(id);
-    setDocs(prev => prev.filter(d => d.id !== id));
+  function requestDelete(doc: Document) {
+    if (isDemo.current) { setDocs(prev => prev.filter(d => d.id !== doc.id)); return; }
+    setDocDelError(""); setPendingDoc(doc);
+  }
+
+  async function confirmDeleteDoc() {
+    if (!pendingDoc) return;
+    setDeletingDoc(true); setDocDelError("");
+    try {
+      await api.documents.delete(pendingDoc.id);
+      setDocs(prev => prev.filter(d => d.id !== pendingDoc.id));
+      setPendingDoc(null);
+    } catch (e: any) {
+      setDocDelError(e.message || "刪除失敗");
+    } finally {
+      setDeletingDoc(false);
+    }
   }
 
   async function submitManual() {
     if (!manualText.trim() || !kbId || !session) return;
-    if (isDemo.current) { alert("Demo 模式下無法真實上傳。"); return; }
+    setManualError("");
+    if (isDemo.current) { setManualError("Demo 模式下無法真實上傳，後端連接後即可使用。"); return; }
     const blob = new Blob([manualText], { type: "text/plain" });
     const file = new File([blob], `${manualTitle || "手動輸入"}.txt`, { type: "text/plain" });
     setUploading(true);
@@ -105,7 +123,7 @@ export default function AdminPage() {
       await api.documents.upload(kbId, file);
       setManualText(""); setManualTitle("");
       await loadDocs(kbId);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { setManualError(e.message || "上傳失敗"); }
     setUploading(false);
   }
 
@@ -183,6 +201,9 @@ export default function AdminPage() {
                 className="auth-input" />
               <textarea placeholder="貼上或輸入文字內容…" value={manualText} onChange={e => setManualText(e.target.value)} rows={8}
                 className="auth-input" style={{ resize: "vertical", lineHeight: 1.6 }} />
+              {manualError && (
+                <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--danger-soft)", border: "1px solid var(--danger)", color: "var(--danger)", fontSize: 13 }}>{manualError}</div>
+              )}
               <button onClick={submitManual} disabled={uploading || !manualText.trim()}
                 className="btn-primary" style={{ alignSelf: "flex-start", padding: "10px 24px", fontSize: 14 }}>
                 {uploading ? "處理中…" : "新增到知識庫"}
@@ -235,13 +256,25 @@ export default function AdminPage() {
                     </span>
                   </div>
                   {/* Delete */}
-                  <button className="del-btn" onClick={() => deleteDoc(doc.id)} style={{ flexShrink: 0 }}>×</button>
+                  <button className="del-btn" onClick={() => requestDelete(doc)} style={{ flexShrink: 0 }}>×</button>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDoc}
+        danger
+        title="刪除文件"
+        message={pendingDoc ? `確定刪除「${pendingDoc.filename}」？相關向量段落將一併移除。` : ""}
+        confirmText="刪除"
+        loading={deletingDoc}
+        error={docDelError}
+        onConfirm={confirmDeleteDoc}
+        onCancel={() => { if (!deletingDoc) { setPendingDoc(null); setDocDelError(""); } }}
+      />
     </div>
   );
 }

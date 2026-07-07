@@ -33,6 +33,32 @@ def _sources_of(chunks: list[dict]) -> list[dict]:
     ]
 
 
+def _sse(payload: dict) -> str:
+    return "data: " + json.dumps(payload) + "\n\n"
+
+
+async def _sse_answer(token_stream, question, conversation_id, sb, *, prefix="", sources=None):
+    """共用 SSE 產生器：串流 token → (可選來源) → 保存 → [DONE]。
+    LLMError 時對外泛化訊息、不存入對話（grounded/general 兩分支共用）。"""
+    full = []
+    if prefix:
+        full.append(prefix)
+        yield _sse({"text": prefix})
+    try:
+        async for text in token_stream:
+            full.append(text)
+            yield _sse({"text": text})
+    except LLMError:
+        yield _sse({"text": STREAM_ERROR_TEXT})
+        yield "data: [DONE]\n\n"
+        return
+    if sources is not None:
+        yield _sse({"sources": sources})
+    if conversation_id:
+        await _save_messages(sb, conversation_id, question, "".join(full))
+    yield "data: [DONE]\n\n"
+
+
 @router.post("/ask")
 async def ask(
     req: ChatRequest,
@@ -46,24 +72,10 @@ async def ask(
 
     chunks = await search_chunks(sb, req.kb_id, req.question)
     if not chunks:
-        # 混合模式：知識庫無相關資料 → 用 AI 通用知識回答，並標註來源以區分
+        # 混合模式：知識庫無相關資料 → 用 AI 通用知識回答，並加前綴以區分（無來源）
         if req.stream:
-            async def _general():
-                full = [GENERAL_DISCLAIMER]
-                yield "data: " + json.dumps({"text": GENERAL_DISCLAIMER}) + "\n\n"
-                try:
-                    async for text in stream_general(req.question):
-                        full.append(text)
-                        yield "data: " + json.dumps({"text": text}) + "\n\n"
-                except LLMError:
-                    # 生成失敗：對外泛化訊息、不存入對話
-                    yield "data: " + json.dumps({"text": STREAM_ERROR_TEXT}) + "\n\n"
-                    yield "data: [DONE]\n\n"
-                    return
-                if req.conversation_id:
-                    await _save_messages(sb, req.conversation_id, req.question, "".join(full))
-                yield "data: [DONE]\n\n"
-            return StreamingResponse(_general(), media_type="text/event-stream")
+            gen = _sse_answer(stream_general(req.question), req.question, req.conversation_id, sb, prefix=GENERAL_DISCLAIMER)
+            return StreamingResponse(gen, media_type="text/event-stream")
         answer = GENERAL_DISCLAIMER + await complete_general(req.question)
         if req.conversation_id:
             await _save_messages(sb, req.conversation_id, req.question, answer)
@@ -73,22 +85,9 @@ async def ask(
     sources = _sources_of(chunks)
 
     if req.stream:
-        async def _stream():
-            full_answer = []
-            try:
-                async for text in stream_answer(req.question, context):
-                    full_answer.append(text)
-                    yield "data: " + json.dumps({"text": text}) + "\n\n"
-            except LLMError:
-                yield "data: " + json.dumps({"text": STREAM_ERROR_TEXT}) + "\n\n"
-                yield "data: [DONE]\n\n"
-                return
-            # 串流結束前補送來源，並在 [DONE] 前保存（避免斷線遺失）
-            yield "data: " + json.dumps({"sources": sources}) + "\n\n"
-            if req.conversation_id:
-                await _save_messages(sb, req.conversation_id, req.question, "".join(full_answer))
-            yield "data: [DONE]\n\n"
-        return StreamingResponse(_stream(), media_type="text/event-stream")
+        # 串流結束前補送來源，並在 [DONE] 前保存（避免斷線遺失）
+        gen = _sse_answer(stream_answer(req.question, context), req.question, req.conversation_id, sb, sources=sources)
+        return StreamingResponse(gen, media_type="text/event-stream")
 
     answer = await complete_answer(req.question, context)
     if req.conversation_id:

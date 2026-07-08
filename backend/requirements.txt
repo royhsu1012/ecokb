@@ -6,7 +6,7 @@ supabase==2.31.0
 google-genai==1.29.0
 pymupdf==1.24.4
 mammoth==1.7.1
-pandas==2.2.2
+pandas==3.0.3
 openpyxl==3.1.2
 jieba==0.42.1
 httpx==0.28.1

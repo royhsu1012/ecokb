@@ -11,5 +11,5 @@ openpyxl==3.1.2
 jieba==0.42.1
 httpx==0.28.1
 pydantic==2.13.4
-pydantic-settings==2.12.0
+pydantic-settings==2.14.2
 email-validator==2.3.0  # pydantic EmailStr（register email 驗證）需要，顯式釘版避免 fresh deploy 缺套件
